@@ -1,5 +1,127 @@
 const CELL_SIZE = 50;
 
+const SoundManager = {
+    context: null,
+    enabled: true,
+    initialized: false,
+    files: {},
+    init() {
+        if (this.initialized) {
+            return;
+        }
+        this.initialized = true;
+
+        this.files.drag = new Audio('sounds/click.wav');
+        this.files.place = new Audio('sounds/ding.wav');
+        this.files.clear = new Audio('sounds/boom.wav');
+        Object.values(this.files).forEach((audio) => {
+            audio.preload = 'auto';
+            audio.volume = 0.7;
+        });
+
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext && !this.context) {
+            this.context = new AudioContext();
+        }
+    },
+    resume() {
+        this.init();
+        if (this.context && this.context.state === 'suspended') {
+            this.context.resume();
+        }
+    },
+    playTone(freq, duration, type = 'sine', gain = 0.08) {
+        if (!this.enabled) {
+            return;
+        }
+        this.init();
+        if (!this.context) {
+            return;
+        }
+        const ctx = this.context;
+        const oscillator = ctx.createOscillator();
+        const volume = ctx.createGain();
+        oscillator.type = type;
+        oscillator.frequency.value = freq;
+        volume.gain.value = gain;
+        oscillator.connect(volume);
+        volume.connect(ctx.destination);
+        oscillator.start();
+        volume.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+        oscillator.stop(ctx.currentTime + duration);
+    },
+    playChord(freqs, duration, type = 'sine', gain = 0.05) {
+        freqs.forEach((freq) => this.playTone(freq, duration, type, gain));
+    },
+    playFile(name) {
+        const audio = this.files[name];
+        if (!audio) {
+            return false;
+        }
+        const instance = audio.cloneNode(true);
+        instance.volume = audio.volume;
+        instance.play().catch(() => { });
+        return true;
+    },
+    play(name) {
+        if (!this.enabled) {
+            return;
+        }
+        this.init();
+        if (this.playFile(name)) {
+            return;
+        }
+        switch (name) {
+            case 'drag':
+                this.playTone(240, 0.06, 'triangle', 0.06);
+                break;
+            case 'place':
+                this.playChord([420, 620], 0.12, 'sine', 0.07);
+                break;
+            case 'clear':
+                this.playChord([760, 980], 0.16, 'sine', 0.08);
+                break;
+            case 'gameover':
+                this.playChord([180, 240], 0.4, 'sine', 0.06);
+                break;
+            case 'shuffle':
+                this.playTone(300, 0.08, 'triangle', 0.06);
+                break;
+            default:
+                break;
+        }
+    }
+};
+
+const initSplash = () => {
+    const splash = document.getElementById('splash');
+    const bar = document.getElementById('splash-bar');
+    const percent = document.getElementById('splash-percent');
+    if (!splash || !bar || !percent) {
+        return;
+    }
+
+    let progress = 0;
+    const tick = () => {
+        progress = Math.min(100, progress + 8 + Math.random() * 12);
+        bar.style.width = `${progress}%`;
+        percent.textContent = `${Math.round(progress)}%`;
+        if (progress < 100) {
+            requestAnimationFrame(tick);
+            return;
+        }
+        setTimeout(() => {
+            splash.classList.add('is-hidden');
+            splash.classList.remove('is-visible');
+            splash.setAttribute('aria-hidden', 'true');
+        }, 300);
+    };
+
+    requestAnimationFrame(tick);
+};
+
+window.addEventListener('load', initSplash);
+
 const BLOCK_TEXTURES = [
     { key: 'crystal_red', fill: '#FF0055', stroke: '#c00040' },
     { key: 'crystal_blue', fill: '#00D4FF', stroke: '#008db0' },
@@ -269,8 +391,21 @@ function create() {
     let isGameOver = false;
     const domModal = document.getElementById('gameover');
     const domRestart = domModal ? domModal.querySelector('.btn') : null;
+    const domShare = document.getElementById('share-score');
     const domHighValue = document.getElementById('high-score-value');
     const domScoreValue = document.getElementById('score-value');
+    const domHammer = document.getElementById('power-hammer');
+    const domShuffle = document.getElementById('power-shuffle');
+    let deleteMode = false;
+
+    const setDeleteMode = (enabled) => {
+        deleteMode = enabled;
+        document.body.classList.toggle('delete-mode', deleteMode);
+        if (domHammer) {
+            domHammer.classList.toggle('powerup--active', deleteMode);
+        }
+    };
+    setDeleteMode(false);
 
     const showDomGameOver = () => {
         if (domModal) {
@@ -281,6 +416,17 @@ function create() {
     const hideDomGameOver = () => {
         if (domModal) {
             domModal.classList.remove('is-visible');
+        }
+    };
+
+    const shareScore = () => {
+        const text = `Crystal Puzzle - Ochko: ${score}`;
+        if (navigator.share) {
+            navigator.share({ title: 'Crystal Puzzle', text }).catch(() => { });
+            return;
+        }
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).catch(() => { });
         }
     };
 
@@ -447,6 +593,45 @@ function create() {
         }
     };
 
+    const animateBlockRemoval = (sprite) => {
+        if (!sprite) {
+            return;
+        }
+        this.tweens.add({
+            targets: sprite,
+            scale: 0,
+            alpha: 0,
+            duration: 300,
+            ease: 'Back.In',
+            onComplete: () => sprite.destroy()
+        });
+    };
+
+    const flashLine = (x, y, width, height) => {
+        const flash = this.add.rectangle(x, y, width, height, 0xbc13fe, 0.45);
+        flash.setBlendMode(Phaser.BlendModes.ADD);
+        flash.setDepth(depth.gridGlow + 1);
+        this.tweens.add({
+            targets: flash,
+            alpha: 0,
+            duration: 260,
+            ease: 'Quad.Out',
+            onComplete: () => flash.destroy()
+        });
+    };
+
+    const animateLineClear = (rows, cols, sprites) => {
+        rows.forEach((row) => {
+            const y = startY + row * cellSize + cellSize / 2;
+            flashLine(startX + gridWidth / 2, y, gridWidth, cellSize);
+        });
+        cols.forEach((col) => {
+            const x = startX + col * cellSize + cellSize / 2;
+            flashLine(x, startY + gridHeight / 2, cellSize, gridHeight);
+        });
+        sprites.forEach((sprite) => animateBlockRemoval(sprite));
+    };
+
     const checkAndClearLines = () => {
         const rowsToClear = [];
         const colsToClear = [];
@@ -471,24 +656,29 @@ function create() {
         }
 
         if (rowsToClear.length === 0 && colsToClear.length === 0) {
-            return;
+            return 0;
         }
 
+        const sprites = new Set();
         rowsToClear.forEach((y) => {
             for (let x = 0; x < gridSize; x++) {
-                grid[y][x].destroy();
-                grid[y][x] = null;
+                if (grid[y][x]) {
+                    sprites.add(grid[y][x]);
+                    grid[y][x] = null;
+                }
             }
         });
 
         colsToClear.forEach((x) => {
             for (let y = 0; y < gridSize; y++) {
                 if (grid[y][x]) {
-                    grid[y][x].destroy();
+                    sprites.add(grid[y][x]);
                     grid[y][x] = null;
                 }
             }
         });
+
+        animateLineClear(rowsToClear, colsToClear, sprites);
 
         const cleared = rowsToClear.length + colsToClear.length;
         const multiplier = cleared >= 2 ? 2 : 1;
@@ -497,6 +687,8 @@ function create() {
             domScoreValue.textContent = String(score);
         }
         updateHighScore();
+        SoundManager.play('clear');
+        return cleared;
     };
 
     const canPlaceBlocksAnywhere = (blocks) => {
@@ -535,7 +727,9 @@ function create() {
             return;
         }
         isGameOver = true;
+        setDeleteMode(false);
         stillActive.forEach((shape) => shape.disableInteractive());
+        SoundManager.play('gameover');
         showGameOver();
     };
 
@@ -622,10 +816,39 @@ function create() {
         };
     }
 
+    if (domShare) {
+        domShare.onclick = () => {
+            shareScore();
+        };
+    }
+
+    if (domHammer) {
+        domHammer.onclick = () => {
+            if (isGameOver) {
+                return;
+            }
+            setDeleteMode(!deleteMode);
+        };
+    }
+
+    if (domShuffle) {
+        domShuffle.onclick = () => {
+            if (isGameOver) {
+                return;
+            }
+            activeShapes.forEach((shape) => shape.destroy());
+            activeShapes.length = 0;
+            spawnAllShapes();
+            SoundManager.play('shuffle');
+        };
+    }
+
     this.input.on('dragstart', (pointer, gameObject) => {
-        if (isGameOver) {
+        if (isGameOver || deleteMode) {
             return;
         }
+        SoundManager.resume();
+        SoundManager.play('drag');
         gameObject.setDepth(depth.dragging);
         gameObject.setScale(1);
         gameObject.x = pointer.x;
@@ -633,7 +856,7 @@ function create() {
     });
 
     this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
-        if (isGameOver) {
+        if (isGameOver || deleteMode) {
             return;
         }
         gameObject.x = dragX;
@@ -641,8 +864,28 @@ function create() {
         gameObject.setAlpha(0.7);
     });
 
+    this.input.on('pointerdown', (pointer) => {
+        SoundManager.resume();
+        if (!deleteMode || isGameOver) {
+            return;
+        }
+        const gridX = Math.floor((pointer.x - startX) / cellSize);
+        const gridY = Math.floor((pointer.y - startY) / cellSize);
+        if (gridX < 0 || gridX >= gridSize || gridY < 0 || gridY >= gridSize) {
+            return;
+        }
+        const sprite = grid[gridY][gridX];
+        if (!sprite) {
+            return;
+        }
+        grid[gridY][gridX] = null;
+        animateBlockRemoval(sprite);
+        setDeleteMode(false);
+        checkGameOver();
+    });
+
     this.input.on('dragend', (pointer, gameObject) => {
-        if (isGameOver) {
+        if (isGameOver || deleteMode) {
             return;
         }
         const placements = tryPlaceShape(gameObject);
@@ -665,8 +908,8 @@ function create() {
 
         const textureKey = gameObject.getData('textureKey') || blockTextureKeys[0];
         snapAndPlace(gameObject, placements, textureKey);
+        SoundManager.play('place');
         checkAndClearLines();
-        updateHighScore();
 
         const index = activeShapes.indexOf(gameObject);
         if (index !== -1) {

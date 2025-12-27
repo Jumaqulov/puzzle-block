@@ -14,6 +14,16 @@
 </head>
 
 <body>
+    <div class="splash is-visible" id="splash" aria-hidden="true">
+        <div class="splash__panel">
+            <div class="splash__logo">CRYSTAL PUZZLE</div>
+            <div class="splash__bar">
+                <div class="splash__bar-fill" id="splash-bar"></div>
+            </div>
+            <div class="splash__percent" id="splash-percent">0%</div>
+        </div>
+    </div>
+
     <div class="game-shell">
         <div class="side-hud" aria-label="Statistika">
             <div class="side-hud__group">
@@ -26,12 +36,36 @@
             </div>
         </div>
         <div id="game-container"></div>
+        <div class="powerups" aria-label="Power-ups">
+            <button class="powerup" id="power-hammer" type="button">
+                <span class="powerup__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="img" focusable="false">
+                        <path d="M6 2h7l3 3v3l-2 2-3-3-1 1 6 6-2 2-6-6-4 4-2-2 6-6-2-2V5z" fill="currentColor"></path>
+                    </svg>
+                </span>
+                <span class="powerup__label">Hammer</span>
+                <span class="powerup__badge">AD</span>
+            </button>
+            <button class="powerup" id="power-shuffle" type="button">
+                <span class="powerup__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="img" focusable="false">
+                        <path d="M4 7h4l3 3 3-3h6v2h-5l-4 4-4-4H4V7zm16 8h-4l-3-3-3 3H4v2h6l3-3 3 3h5v-2z"
+                            fill="currentColor"></path>
+                    </svg>
+                </span>
+                <span class="powerup__label">Shuffle</span>
+                <span class="powerup__badge">AD</span>
+            </button>
+        </div>
     </div>
 
     <div class="modal" id="gameover" role="dialog" aria-modal="true">
         <div class="modal-card">
             <div class="modal-title">O'yin tugadi</div>
-            <button class="btn" type="button">Qayta boshlash</button>
+            <div class="modal-actions">
+                <button class="btn btn--pulse" type="button">Qayta boshlash</button>
+                <button class="btn btn--ghost" id="share-score" type="button">Share Score</button>
+            </div>
         </div>
     </div>
 
