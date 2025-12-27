@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Ancient Treasures - Dev Mode</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
+</head>
+
+<body>
+    <div class="game-shell">
+        <div class="side-hud" aria-label="Statistika">
+            <div class="side-hud__group">
+                <div class="side-hud__label">Rekord</div>
+                <div class="side-hud__value" id="high-score-value">0</div>
+            </div>
+            <div class="side-hud__group">
+                <div class="side-hud__label">Ochko</div>
+                <div class="side-hud__value side-hud__value--score" id="score-value">0</div>
+            </div>
+        </div>
+        <div id="game-container"></div>
+    </div>
+
+    <div class="modal" id="gameover" role="dialog" aria-modal="true">
+        <div class="modal-card">
+            <div class="modal-title">O'yin tugadi</div>
+            <button class="btn" type="button">Qayta boshlash</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>
