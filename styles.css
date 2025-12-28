@@ -13,6 +13,7 @@
 body {
     margin: 0;
     min-height: 100vh;
+    position: relative;
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -23,6 +24,20 @@ body {
         radial-gradient(800px 420px at 15% 10%, rgba(188, 19, 254, 0.2), transparent 60%),
         radial-gradient(700px 420px at 85% 15%, rgba(0, 212, 255, 0.15), transparent 60%),
         var(--bg);
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: -20%;
+    pointer-events: none;
+    background:
+        radial-gradient(500px 320px at 30% 30%, rgba(188, 19, 254, 0.22), transparent 60%),
+        radial-gradient(620px 360px at 70% 40%, rgba(0, 212, 255, 0.18), transparent 65%),
+        radial-gradient(540px 380px at 40% 70%, rgba(57, 255, 20, 0.12), transparent 70%);
+    opacity: 0.6;
+    z-index: -1;
+    animation: nebulaDrift 48s ease-in-out infinite alternate;
 }
 
 .splash {
@@ -187,6 +202,7 @@ body {
 }
 
 #game-container {
+    position: relative;
     padding: 12px;
     border-radius: 20px;
     border: 1px solid rgba(61, 28, 113, 0.55);
@@ -202,6 +218,25 @@ body {
     border-radius: 16px;
     box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.35);
     backdrop-filter: blur(4px);
+}
+
+.tutorial-hand {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    left: 18%;
+    top: 70%;
+    color: rgba(255, 255, 255, 0.7);
+    opacity: 0;
+    transform: translate(0, 0) scale(0.9);
+    pointer-events: none;
+    filter: drop-shadow(0 0 12px rgba(188, 19, 254, 0.6));
+    z-index: 5;
+}
+
+.tutorial-hand.is-visible {
+    opacity: 0.9;
+    animation: handDrag 4s ease-in-out infinite;
 }
 
 body.delete-mode #game-container canvas {
@@ -306,6 +341,52 @@ body.delete-mode #game-container canvas {
 
     100% {
         transform: scale(1);
+    }
+}
+
+@keyframes nebulaDrift {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+        transform: translate3d(-3%, 2%, 0) scale(1.03);
+    }
+    100% {
+        transform: translate3d(3%, -2%, 0) scale(1.05);
+    }
+}
+
+@keyframes handDrag {
+    0% {
+        transform: translate(0, 0) scale(0.9);
+        opacity: 0;
+    }
+    20% {
+        opacity: 0.85;
+    }
+    60% {
+        transform: translate(120px, -160px) scale(1);
+        opacity: 0.95;
+    }
+    100% {
+        transform: translate(140px, -190px) scale(1);
+        opacity: 0;
+    }
+}
+
+.record-glow {
+    animation: recordGlow 1.2s ease-out;
+}
+
+@keyframes recordGlow {
+    0% {
+        text-shadow: 0 0 6px rgba(188, 19, 254, 0.6);
+    }
+    50% {
+        text-shadow: 0 0 18px rgba(188, 19, 254, 1), 0 0 28px rgba(0, 212, 255, 0.7);
+    }
+    100% {
+        text-shadow: 0 0 6px rgba(188, 19, 254, 0.6);
     }
 }
 

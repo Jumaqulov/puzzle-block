@@ -393,10 +393,18 @@ function create() {
     const domRestart = domModal ? domModal.querySelector('.btn') : null;
     const domShare = document.getElementById('share-score');
     const domHighValue = document.getElementById('high-score-value');
+    const domHighLabel = document.getElementById('high-score-label');
     const domScoreValue = document.getElementById('score-value');
     const domHammer = document.getElementById('power-hammer');
     const domShuffle = document.getElementById('power-shuffle');
     let deleteMode = false;
+    let comboStreak = 0;
+    let recordCelebrated = false;
+    const domHand = document.getElementById('hand-tutorial');
+
+    if (domHighLabel) {
+        domHighLabel.classList.remove('record-glow');
+    }
 
     const setDeleteMode = (enabled) => {
         deleteMode = enabled;
@@ -445,6 +453,19 @@ function create() {
     }
     if (domHighValue) {
         domHighValue.textContent = String(highScore);
+    }
+
+    if (domHand) {
+        const tutorialKey = 'crystal_puzzle_tutorial_seen';
+        if (!localStorage.getItem(tutorialKey)) {
+            domHand.classList.add('is-visible');
+            const dismiss = () => {
+                domHand.classList.remove('is-visible');
+                localStorage.setItem(tutorialKey, '1');
+            };
+            document.addEventListener('pointerdown', dismiss, { once: true });
+            setTimeout(dismiss, 6000);
+        }
     }
 
     const availableDockWidth = config.width - dockPaddingX * 2;
@@ -586,6 +607,12 @@ function create() {
         if (domHighValue) {
             domHighValue.textContent = String(highScore);
         }
+        if (domHighLabel && !recordCelebrated) {
+            recordCelebrated = true;
+            domHighLabel.classList.remove('record-glow');
+            void domHighLabel.offsetWidth;
+            domHighLabel.classList.add('record-glow');
+        }
         try {
             localStorage.setItem('ancient_treasures_high_score', String(highScore));
         } catch (err) {
@@ -627,9 +654,9 @@ function create() {
 
         this.tweens.add({
             targets: sprite,
-            scale: 0.2,
+            scale: 0,
             alpha: 0,
-            duration: 180,
+            duration: 300,
             ease: 'Quad.Out',
             onComplete: () => sprite.destroy()
         });
@@ -660,6 +687,44 @@ function create() {
         sprites.forEach((sprite) => animateBlockRemoval(sprite));
     };
 
+    const comboScale = 3.2;
+    const comboText = this.add.text(config.width / 2, config.height / 2 - 56, '', {
+        fontFamily: 'Orbitron, Exo 2, sans-serif',
+        fontSize: '28px',
+        color: '#FFD400'
+    }).setOrigin(0.5, 0.5).setAlpha(0).setVisible(false).setDepth(depth.dragging + 2);
+    comboText.setScale(comboScale);
+    comboText.setStroke('rgba(15, 5, 29, 0.95)', 6);
+    comboText.setShadow(0, 0, 'rgba(255, 208, 0, 0.9)', 6, true, true);
+    let comboTween = null;
+
+    const showComboMessage = (message) => {
+        comboText.setText(message);
+        comboText.setAlpha(0);
+        comboText.setScale(comboScale * 0.85);
+        comboText.setVisible(true);
+        if (comboTween) {
+            comboTween.stop();
+        }
+        comboTween = this.tweens.add({
+            targets: comboText,
+            alpha: 1,
+            scale: comboScale,
+            duration: 180,
+            ease: 'Back.Out',
+            onComplete: () => {
+                comboTween = this.tweens.add({
+                    targets: comboText,
+                    alpha: 0,
+                    duration: 220,
+                    delay: 600,
+                    ease: 'Quad.In',
+                    onComplete: () => comboText.setVisible(false)
+                });
+            }
+        });
+    };
+
     const checkAndClearLines = () => {
         const rowsToClear = [];
         const colsToClear = [];
@@ -684,6 +749,7 @@ function create() {
         }
 
         if (rowsToClear.length === 0 && colsToClear.length === 0) {
+            comboStreak = 0;
             return 0;
         }
 
@@ -709,13 +775,18 @@ function create() {
         animateLineClear(rowsToClear, colsToClear, sprites);
 
         const cleared = rowsToClear.length + colsToClear.length;
-        const multiplier = cleared >= 2 ? 2 : 1;
+        comboStreak += 1;
+        const multiplier = Math.max(cleared, comboStreak);
         score += cleared * 10 * multiplier;
         if (domScoreValue) {
             domScoreValue.textContent = String(score);
         }
         updateHighScore();
         SoundManager.play('clear');
+        if (multiplier >= 2) {
+            const label = multiplier >= 4 ? `EXCELLENT! x${multiplier}` : `COMBO x${multiplier}`;
+            showComboMessage(label);
+        }
         return cleared;
     };
 
@@ -908,6 +979,7 @@ function create() {
         }
         grid[gridY][gridX] = null;
         animateBlockRemoval(sprite);
+        comboStreak = 0;
         setDeleteMode(false);
         checkGameOver();
     });

@@ -27,7 +27,7 @@
     <div class="game-shell">
         <div class="side-hud" aria-label="Statistika">
             <div class="side-hud__group">
-                <div class="side-hud__label">Rekord</div>
+                <div class="side-hud__label" id="high-score-label">Rekord</div>
                 <div class="side-hud__value" id="high-score-value">0</div>
             </div>
             <div class="side-hud__group">
@@ -35,7 +35,15 @@
                 <div class="side-hud__value side-hud__value--score" id="score-value">0</div>
             </div>
         </div>
-        <div id="game-container"></div>
+        <div id="game-container">
+            <div class="tutorial-hand" id="hand-tutorial" aria-hidden="true">
+                <svg viewBox="0 0 64 64" role="img" focusable="false">
+                    <path
+                        d="M28 8c-2.2 0-4 1.8-4 4v20h-2V18c0-2.2-1.8-4-4-4s-4 1.8-4 4v18H8c-2.2 0-4 1.8-4 4 0 2.2 1.8 4 4 4h6l8 14c2 3.5 5.7 6 9.9 6h6.6c4.2 0 7.9-2.5 9.9-6l5.6-10c1-1.8 0.4-4.1-1.4-5.1-1.8-1-4.1-0.4-5.1 1.4l-3.8 6.8V14c0-2.2-1.8-4-4-4s-4 1.8-4 4v18h-2V12c0-2.2-1.8-4-4-4z"
+                        fill="currentColor" />
+                </svg>
+            </div>
+        </div>
         <div class="powerups" aria-label="Power-ups">
             <button class="powerup" id="power-hammer" type="button">
                 <span class="powerup__icon" aria-hidden="true">
