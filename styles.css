@@ -187,6 +187,10 @@ body::before {
     height: 100%;
 }
 
+.powerup__icon i {
+    font-size: 26px;
+}
+
 .powerup__label {
     font-size: 11px;
     letter-spacing: 0.4px;
@@ -232,6 +236,10 @@ body::before {
     pointer-events: none;
     filter: drop-shadow(0 0 12px rgba(188, 19, 254, 0.6));
     z-index: 5;
+}
+
+.tutorial-hand i {
+    font-size: 56px;
 }
 
 .tutorial-hand.is-visible {
@@ -348,9 +356,11 @@ body.delete-mode #game-container canvas {
     0% {
         transform: translate3d(0, 0, 0) scale(1);
     }
+
     50% {
         transform: translate3d(-3%, 2%, 0) scale(1.03);
     }
+
     100% {
         transform: translate3d(3%, -2%, 0) scale(1.05);
     }
@@ -361,13 +371,16 @@ body.delete-mode #game-container canvas {
         transform: translate(0, 0) scale(0.9);
         opacity: 0;
     }
+
     20% {
         opacity: 0.85;
     }
+
     60% {
         transform: translate(120px, -160px) scale(1);
         opacity: 0.95;
     }
+
     100% {
         transform: translate(140px, -190px) scale(1);
         opacity: 0;
@@ -382,9 +395,11 @@ body.delete-mode #game-container canvas {
     0% {
         text-shadow: 0 0 6px rgba(188, 19, 254, 0.6);
     }
+
     50% {
         text-shadow: 0 0 18px rgba(188, 19, 254, 1), 0 0 28px rgba(0, 212, 255, 0.7);
     }
+
     100% {
         text-shadow: 0 0 6px rgba(188, 19, 254, 0.6);
     }
