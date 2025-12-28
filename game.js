@@ -687,42 +687,46 @@ function create() {
         sprites.forEach((sprite) => animateBlockRemoval(sprite));
     };
 
-    const comboScale = 3.2;
-    const comboText = this.add.text(config.width / 2, config.height / 2 - 56, '', {
-        fontFamily: 'Orbitron, Exo 2, sans-serif',
-        fontSize: '28px',
-        color: '#FFD400'
-    }).setOrigin(0.5, 0.5).setAlpha(0).setVisible(false).setDepth(depth.dragging + 2);
-    comboText.setScale(comboScale);
-    comboText.setStroke('rgba(15, 5, 29, 0.95)', 6);
-    comboText.setShadow(0, 0, 'rgba(255, 208, 0, 0.9)', 6, true, true);
-    let comboTween = null;
+    // DOM orqali combo text - tiniq va katta
+    const comboDiv = document.createElement('div');
+    comboDiv.id = 'combo-text';
+    comboDiv.style.cssText = `
+        position: absolute;
+        top: 25px;
+        left: 50%;
+        transform: translateX(-50%) scale(0.9);
+        font-family: 'Orbitron', 'Exo 2', sans-serif;
+        font-size: 42px;
+        font-weight: 700;
+        color: #FFD700;
+        text-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+        pointer-events: none;
+        opacity: 0;
+        z-index: 100;
+        white-space: nowrap;
+        letter-spacing: 2px;
+    `;
+    document.getElementById('game-container').appendChild(comboDiv);
+
+    let comboTimeout = null;
 
     const showComboMessage = (message) => {
-        comboText.setText(message);
-        comboText.setAlpha(0);
-        comboText.setScale(comboScale * 0.85);
-        comboText.setVisible(true);
-        if (comboTween) {
-            comboTween.stop();
-        }
-        comboTween = this.tweens.add({
-            targets: comboText,
-            alpha: 1,
-            scale: comboScale,
-            duration: 180,
-            ease: 'Back.Out',
-            onComplete: () => {
-                comboTween = this.tweens.add({
-                    targets: comboText,
-                    alpha: 0,
-                    duration: 220,
-                    delay: 600,
-                    ease: 'Quad.In',
-                    onComplete: () => comboText.setVisible(false)
-                });
-            }
+        comboDiv.textContent = message;
+        comboDiv.style.opacity = '0';
+        comboDiv.style.transform = 'translateX(-50%) scale(0.9)';
+
+        // Animatsiya
+        requestAnimationFrame(() => {
+            comboDiv.style.transition = 'opacity 0.18s ease-out, transform 0.18s ease-out';
+            comboDiv.style.opacity = '1';
+            comboDiv.style.transform = 'translateX(-50%) scale(1)';
         });
+
+        if (comboTimeout) clearTimeout(comboTimeout);
+        comboTimeout = setTimeout(() => {
+            comboDiv.style.transition = 'opacity 0.22s ease-in';
+            comboDiv.style.opacity = '0';
+        }, 800);
     };
 
     const checkAndClearLines = () => {
