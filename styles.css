@@ -2,6 +2,8 @@
     --bg: #0F051D;
     --glow: #BC13FE;
     --grid: #3D1C71;
+    --cyan: #00D4FF;
+    --gold: #FFD700;
 }
 
 *,
@@ -20,24 +22,71 @@ body {
     padding: 24px;
     color: #ffffff;
     font-family: "Exo 2", "Orbitron", sans-serif;
-    background:
-        radial-gradient(800px 420px at 15% 10%, rgba(188, 19, 254, 0.2), transparent 60%),
-        radial-gradient(700px 420px at 85% 15%, rgba(0, 212, 255, 0.15), transparent 60%),
-        var(--bg);
+    background: var(--bg);
+    overflow-x: hidden;
 }
 
+/* === DYNAMIC LIVING BACKGROUND === */
 body::before {
     content: "";
     position: fixed;
-    inset: -20%;
+    inset: -50%;
     pointer-events: none;
     background:
-        radial-gradient(500px 320px at 30% 30%, rgba(188, 19, 254, 0.22), transparent 60%),
-        radial-gradient(620px 360px at 70% 40%, rgba(0, 212, 255, 0.18), transparent 65%),
-        radial-gradient(540px 380px at 40% 70%, rgba(57, 255, 20, 0.12), transparent 70%);
-    opacity: 0.6;
+        radial-gradient(600px 400px at 20% 20%, rgba(188, 19, 254, 0.25), transparent 50%),
+        radial-gradient(500px 350px at 80% 30%, rgba(0, 212, 255, 0.2), transparent 50%),
+        radial-gradient(450px 300px at 50% 80%, rgba(57, 255, 20, 0.15), transparent 50%),
+        radial-gradient(700px 500px at 70% 60%, rgba(255, 0, 85, 0.1), transparent 60%);
+    z-index: -2;
+    animation: nebulaFlow 60s ease-in-out infinite;
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    inset: -30%;
+    pointer-events: none;
+    background:
+        radial-gradient(400px 300px at 60% 40%, rgba(188, 19, 254, 0.18), transparent 50%),
+        radial-gradient(350px 250px at 30% 70%, rgba(0, 212, 255, 0.15), transparent 50%);
     z-index: -1;
-    animation: nebulaDrift 48s ease-in-out infinite alternate;
+    animation: nebulaFlowReverse 45s ease-in-out infinite;
+}
+
+@keyframes nebulaFlow {
+
+    0%,
+    100% {
+        transform: translate(0, 0) rotate(0deg) scale(1);
+    }
+
+    25% {
+        transform: translate(5%, -3%) rotate(1deg) scale(1.02);
+    }
+
+    50% {
+        transform: translate(-3%, 5%) rotate(-1deg) scale(1.04);
+    }
+
+    75% {
+        transform: translate(-5%, -2%) rotate(0.5deg) scale(1.01);
+    }
+}
+
+@keyframes nebulaFlowReverse {
+
+    0%,
+    100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+
+    33% {
+        transform: translate(-4%, 3%) rotate(-0.5deg);
+    }
+
+    66% {
+        transform: translate(3%, -4%) rotate(0.5deg);
+    }
 }
 
 .splash {
@@ -352,20 +401,6 @@ body.delete-mode #game-container canvas {
     }
 }
 
-@keyframes nebulaDrift {
-    0% {
-        transform: translate3d(0, 0, 0) scale(1);
-    }
-
-    50% {
-        transform: translate3d(-3%, 2%, 0) scale(1.03);
-    }
-
-    100% {
-        transform: translate3d(3%, -2%, 0) scale(1.05);
-    }
-}
-
 @keyframes handDrag {
     0% {
         transform: translate(0, 0) scale(0.9);
@@ -423,5 +458,283 @@ body.delete-mode #game-container canvas {
         position: static;
         flex-direction: row;
         margin-top: 12px;
+    }
+}
+
+/* ============================================
+   GAME JUICE EFFECTS - AAA Quality
+   ============================================ */
+
+/* === 1. CRYSTAL PARTICLE SYSTEM === */
+.crystal-particle {
+    position: fixed;
+    width: 12px;
+    height: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    border-radius: 2px;
+    transform-origin: center;
+    will-change: transform, opacity;
+}
+
+.crystal-particle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: inherit;
+    border-radius: inherit;
+    filter: blur(4px);
+    opacity: 0.6;
+}
+
+@keyframes particleExplode {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0.2);
+        opacity: 0;
+    }
+}
+
+/* === 2. FLOATING TEXT POPUP === */
+.floating-text {
+    position: fixed;
+    pointer-events: none;
+    z-index: 1001;
+    font-family: 'Orbitron', 'Exo 2', sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    color: var(--gold);
+    text-shadow:
+        0 0 10px rgba(255, 215, 0, 0.9),
+        0 0 20px rgba(255, 215, 0, 0.6),
+        0 0 30px rgba(255, 215, 0, 0.4),
+        2px 2px 0 rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    will-change: transform, opacity;
+    animation: floatUp 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.floating-text--combo {
+    font-size: 28px;
+    color: var(--cyan);
+    text-shadow:
+        0 0 10px rgba(0, 212, 255, 0.9),
+        0 0 20px rgba(0, 212, 255, 0.6),
+        0 0 30px rgba(0, 212, 255, 0.4),
+        2px 2px 0 rgba(0, 0, 0, 0.8);
+}
+
+.floating-text--excellent {
+    font-size: 32px;
+    background: linear-gradient(135deg, #FFD700, #FF6B6B, #BC13FE, #00D4FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 10px rgba(188, 19, 254, 0.8)) drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.9));
+}
+
+@keyframes floatUp {
+    0% {
+        transform: translateY(0) scale(0.5);
+        opacity: 0;
+    }
+
+    15% {
+        transform: translateY(-10px) scale(1.2);
+        opacity: 1;
+    }
+
+    30% {
+        transform: translateY(-20px) scale(1);
+    }
+
+    100% {
+        transform: translateY(-80px) scale(0.8);
+        opacity: 0;
+    }
+}
+
+/* === 3. SCREEN SHAKE === */
+.game-shell.shake-light {
+    animation: shakeLight 0.3s ease-out;
+}
+
+.game-shell.shake-medium {
+    animation: shakeMedium 0.35s ease-out;
+}
+
+.game-shell.shake-heavy {
+    animation: shakeHeavy 0.4s ease-out;
+}
+
+@keyframes shakeLight {
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    20% {
+        transform: translate(-2px, 1px);
+    }
+
+    40% {
+        transform: translate(2px, -1px);
+    }
+
+    60% {
+        transform: translate(-1px, 1px);
+    }
+
+    80% {
+        transform: translate(1px, -1px);
+    }
+}
+
+@keyframes shakeMedium {
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    15% {
+        transform: translate(-4px, 2px) rotate(-0.5deg);
+    }
+
+    30% {
+        transform: translate(4px, -2px) rotate(0.5deg);
+    }
+
+    45% {
+        transform: translate(-3px, 1px) rotate(-0.3deg);
+    }
+
+    60% {
+        transform: translate(3px, -1px) rotate(0.3deg);
+    }
+
+    75% {
+        transform: translate(-2px, 1px);
+    }
+
+    90% {
+        transform: translate(1px, 0);
+    }
+}
+
+@keyframes shakeHeavy {
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    10% {
+        transform: translate(-6px, 3px) rotate(-1deg);
+    }
+
+    20% {
+        transform: translate(6px, -3px) rotate(1deg);
+    }
+
+    30% {
+        transform: translate(-5px, 2px) rotate(-0.8deg);
+    }
+
+    40% {
+        transform: translate(5px, -2px) rotate(0.8deg);
+    }
+
+    50% {
+        transform: translate(-4px, 2px) rotate(-0.5deg);
+    }
+
+    60% {
+        transform: translate(4px, -1px) rotate(0.5deg);
+    }
+
+    70% {
+        transform: translate(-3px, 1px) rotate(-0.3deg);
+    }
+
+    80% {
+        transform: translate(2px, -1px) rotate(0.2deg);
+    }
+
+    90% {
+        transform: translate(-1px, 0);
+    }
+}
+
+/* === 4. LINE CLEAR FLASH OVERLAY === */
+.line-flash {
+    position: fixed;
+    pointer-events: none;
+    z-index: 999;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(188, 19, 254, 0.4),
+            rgba(0, 212, 255, 0.5),
+            rgba(188, 19, 254, 0.4),
+            transparent);
+    animation: lineFlash 0.4s ease-out forwards;
+}
+
+@keyframes lineFlash {
+    0% {
+        opacity: 0;
+        transform: scaleX(0);
+    }
+
+    30% {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scaleX(1.1);
+    }
+}
+
+/* === 5. SCORE PULSE EFFECT === */
+.side-hud__value--score.pulse {
+    animation: scorePulse 0.4s ease-out;
+}
+
+@keyframes scorePulse {
+    0% {
+        transform: scale(1);
+    }
+
+    30% {
+        transform: scale(1.3);
+        color: var(--gold);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* === 6. POWERUP GLOW ON AVAILABLE === */
+.powerup.glow-ready {
+    animation: powerupGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes powerupGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 18px rgba(188, 19, 254, 0.35);
+    }
+
+    50% {
+        box-shadow: 0 0 25px rgba(0, 212, 255, 0.6), 0 0 35px rgba(188, 19, 254, 0.4);
     }
 }

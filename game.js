@@ -93,6 +93,168 @@ const SoundManager = {
     }
 };
 
+// ============================================
+// GAME JUICE EFFECTS - AAA Quality Visual Feedback
+// ============================================
+const GameJuice = {
+    // Texture key -> color mapping
+    colorMap: {
+        'crystal_red': '#FF0055',
+        'crystal_blue': '#00D4FF',
+        'crystal_green': '#39FF14',
+        'crystal_purple': '#BC13FE',
+        'crystal_yellow': '#FFD700'
+    },
+
+    // 1. Crystal Particle Explosion
+    createExplosion(x, y, color, particleCount = 10) {
+        const container = document.getElementById('game-container');
+        if (!container) return;
+
+        const rect = container.getBoundingClientRect();
+        const baseX = rect.left + x;
+        const baseY = rect.top + y;
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'crystal-particle';
+
+            // Random direction and distance
+            const angle = (Math.PI * 2 * i / particleCount) + (Math.random() - 0.5) * 0.8;
+            const distance = 40 + Math.random() * 60;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance - 20; // Slight upward bias
+            const rotation = (Math.random() - 0.5) * 360;
+
+            particle.style.cssText = `
+                left: ${baseX}px;
+                top: ${baseY}px;
+                background: ${color};
+                box-shadow: 0 0 8px ${color}, 0 0 15px ${color}80;
+                --tx: ${tx}px;
+                --ty: ${ty}px;
+                --rot: ${rotation}deg;
+                animation: particleExplode ${0.5 + Math.random() * 0.2}s ease-out forwards;
+            `;
+
+            document.body.appendChild(particle);
+
+            // Cleanup
+            setTimeout(() => particle.remove(), 800);
+        }
+    },
+
+    // 2. Floating Pop-up Text
+    showFloatingText(text, x, y, type = 'normal') {
+        const container = document.getElementById('game-container');
+        if (!container) return;
+
+        const rect = container.getBoundingClientRect();
+        const floatingText = document.createElement('div');
+        floatingText.className = 'floating-text';
+
+        if (type === 'combo') {
+            floatingText.classList.add('floating-text--combo');
+        } else if (type === 'excellent') {
+            floatingText.classList.add('floating-text--excellent');
+        }
+
+        floatingText.textContent = text;
+        floatingText.style.left = `${rect.left + x}px`;
+        floatingText.style.top = `${rect.top + y}px`;
+
+        document.body.appendChild(floatingText);
+
+        // Cleanup
+        setTimeout(() => floatingText.remove(), 1100);
+    },
+
+    // 3. Screen Shake
+    shakeScreen(intensity = 'light') {
+        const gameShell = document.querySelector('.game-shell');
+        if (!gameShell) return;
+
+        // Remove existing shake classes
+        gameShell.classList.remove('shake-light', 'shake-medium', 'shake-heavy');
+
+        // Force reflow to restart animation
+        void gameShell.offsetWidth;
+
+        // Add shake class based on intensity
+        gameShell.classList.add(`shake-${intensity}`);
+
+        // Remove class after animation
+        const duration = intensity === 'heavy' ? 400 : intensity === 'medium' ? 350 : 300;
+        setTimeout(() => {
+            gameShell.classList.remove(`shake-${intensity}`);
+        }, duration);
+    },
+
+    // 4. Score Pulse Effect
+    pulseScore() {
+        const scoreEl = document.getElementById('score-value');
+        if (!scoreEl) return;
+
+        scoreEl.classList.remove('pulse');
+        void scoreEl.offsetWidth;
+        scoreEl.classList.add('pulse');
+
+        setTimeout(() => scoreEl.classList.remove('pulse'), 400);
+    },
+
+    // 5. Line Flash Effect (DOM overlay)
+    flashLineDOM(x, y, width, height, isHorizontal = true) {
+        const container = document.getElementById('game-container');
+        if (!container) return;
+
+        const rect = container.getBoundingClientRect();
+        const flash = document.createElement('div');
+        flash.className = 'line-flash';
+
+        flash.style.cssText = `
+            left: ${rect.left + x - width / 2}px;
+            top: ${rect.top + y - height / 2}px;
+            width: ${width}px;
+            height: ${height}px;
+            transform-origin: ${isHorizontal ? 'left center' : 'center top'};
+        `;
+
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 450);
+    },
+
+    // Helper: Get color from texture key
+    getColor(textureKey) {
+        return this.colorMap[textureKey] || '#FFFFFF';
+    },
+
+    // Combined effect for clearing blocks
+    onBlockClear(sprite, gridX, gridY, startX, startY, cellSize) {
+        if (!sprite || !sprite.texture) return;
+
+        const color = this.getColor(sprite.texture.key);
+        const worldX = startX + gridX * cellSize + cellSize / 2;
+        const worldY = startY + gridY * cellSize + cellSize / 2;
+
+        this.createExplosion(worldX, worldY, color, 8);
+    },
+
+    // Combined effect for line clear
+    onLineClear(linesCleared, comboStreak, centerX, centerY) {
+        const intensity = comboStreak >= 4 ? 'heavy' : comboStreak >= 2 ? 'medium' : 'light';
+        this.shakeScreen(intensity);
+        this.pulseScore();
+
+        // Show score feedback
+        const points = linesCleared * 10 * Math.max(linesCleared, comboStreak);
+        const type = comboStreak >= 4 ? 'excellent' : comboStreak >= 2 ? 'combo' : 'normal';
+
+        setTimeout(() => {
+            this.showFloatingText(`+${points}`, centerX, centerY, type);
+        }, 100);
+    }
+};
+
 const initSplash = () => {
     const splash = document.getElementById('splash');
     const bar = document.getElementById('splash-bar');
@@ -676,15 +838,30 @@ function create() {
     };
 
     const animateLineClear = (rows, cols, sprites) => {
+        // Flash effects for rows
         rows.forEach((row) => {
             const y = startY + row * cellSize + cellSize / 2;
             flashLine(startX + gridWidth / 2, y, gridWidth, cellSize);
+            // DOM flash overlay
+            GameJuice.flashLineDOM(startX + gridWidth / 2, y, gridWidth, cellSize, true);
         });
+
+        // Flash effects for columns
         cols.forEach((col) => {
             const x = startX + col * cellSize + cellSize / 2;
             flashLine(x, startY + gridHeight / 2, cellSize, gridHeight);
+            // DOM flash overlay
+            GameJuice.flashLineDOM(x, startY + gridHeight / 2, cellSize, gridHeight, false);
         });
-        sprites.forEach((sprite) => animateBlockRemoval(sprite));
+
+        // Animate each sprite with particle explosion
+        sprites.forEach((sprite) => {
+            if (sprite && sprite.texture) {
+                const color = GameJuice.getColor(sprite.texture.key);
+                GameJuice.createExplosion(sprite.x, sprite.y, color, 8);
+            }
+            animateBlockRemoval(sprite);
+        });
     };
 
     // DOM orqali combo text - tiniq va katta
@@ -781,12 +958,31 @@ function create() {
         const cleared = rowsToClear.length + colsToClear.length;
         comboStreak += 1;
         const multiplier = Math.max(cleared, comboStreak);
-        score += cleared * 10 * multiplier;
+        const earnedPoints = cleared * 10 * multiplier;
+        score += earnedPoints;
         if (domScoreValue) {
             domScoreValue.textContent = String(score);
         }
         updateHighScore();
         SoundManager.play('clear');
+
+        // === GAME JUICE EFFECTS ===
+        // Screen shake based on combo
+        const shakeIntensity = comboStreak >= 4 ? 'heavy' : comboStreak >= 2 ? 'medium' : 'light';
+        GameJuice.shakeScreen(shakeIntensity);
+
+        // Score pulse animation
+        GameJuice.pulseScore();
+
+        // Floating score text at center of cleared area
+        const centerX = startX + gridWidth / 2;
+        const centerY = startY + gridHeight / 2;
+        const textType = comboStreak >= 4 ? 'excellent' : comboStreak >= 2 ? 'combo' : 'normal';
+        setTimeout(() => {
+            GameJuice.showFloatingText(`+${earnedPoints}`, centerX, centerY - 50, textType);
+        }, 150);
+
+        // Show combo message
         if (multiplier >= 2) {
             const label = multiplier >= 4 ? `EXCELLENT! x${multiplier}` : `COMBO x${multiplier}`;
             showComboMessage(label);
