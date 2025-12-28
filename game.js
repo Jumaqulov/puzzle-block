@@ -594,15 +594,43 @@ function create() {
     };
 
     const animateBlockRemoval = (sprite) => {
-        if (!sprite) {
+        if (!sprite || !sprite.active) {
             return;
         }
+
+        const textureKey = sprite.texture ? sprite.texture.key : null;
+        const baseDepth = typeof sprite.depth === 'number' ? sprite.depth : depth.placed;
+        const shardCount = 6;
+
+        if (textureKey) {
+            for (let i = 0; i < shardCount; i++) {
+                const shard = this.add.image(sprite.x, sprite.y, textureKey);
+                const cropSize = Math.round(CELL_SIZE * 0.5);
+                const cropX = Phaser.Math.Between(0, CELL_SIZE - cropSize);
+                const cropY = Phaser.Math.Between(0, CELL_SIZE - cropSize);
+                shard.setCrop(cropX, cropY, cropSize, cropSize);
+                shard.setScale(Phaser.Math.FloatBetween(0.25, 0.4));
+                shard.setDepth(baseDepth + 1);
+
+                this.tweens.add({
+                    targets: shard,
+                    x: sprite.x + Phaser.Math.Between(-30, 30),
+                    y: sprite.y + Phaser.Math.Between(30, 90),
+                    angle: Phaser.Math.Between(-90, 90),
+                    alpha: 0,
+                    duration: 420 + Phaser.Math.Between(0, 140),
+                    ease: 'Quad.In',
+                    onComplete: () => shard.destroy()
+                });
+            }
+        }
+
         this.tweens.add({
             targets: sprite,
-            scale: 0,
+            scale: 0.2,
             alpha: 0,
-            duration: 300,
-            ease: 'Back.In',
+            duration: 180,
+            ease: 'Quad.Out',
             onComplete: () => sprite.destroy()
         });
     };
