@@ -1,9 +1,13 @@
 :root {
     --bg: #0F051D;
+    --bg-deep: #080212;
     --glow: #BC13FE;
     --grid: #3D1C71;
     --cyan: #00D4FF;
     --gold: #FFD700;
+    --nebula-purple: rgba(188, 19, 254, 0.15);
+    --nebula-blue: rgba(0, 150, 255, 0.12);
+    --nebula-magenta: rgba(255, 0, 100, 0.08);
 }
 
 *,
@@ -22,70 +26,186 @@ body {
     padding: 24px;
     color: #ffffff;
     font-family: "Exo 2", "Orbitron", sans-serif;
-    background: var(--bg);
+    background: var(--bg-deep);
     overflow-x: hidden;
 }
 
-/* === DYNAMIC LIVING BACKGROUND === */
-body::before {
-    content: "";
+/* ============================================
+   DEEP SPACE NEBULA BACKGROUND SYSTEM
+   ============================================ */
+
+/* Starfield Canvas Container */
+#starfield-canvas {
     position: fixed;
-    inset: -50%;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -10;
     pointer-events: none;
-    background:
-        radial-gradient(600px 400px at 20% 20%, rgba(188, 19, 254, 0.25), transparent 50%),
-        radial-gradient(500px 350px at 80% 30%, rgba(0, 212, 255, 0.2), transparent 50%),
-        radial-gradient(450px 300px at 50% 80%, rgba(57, 255, 20, 0.15), transparent 50%),
-        radial-gradient(700px 500px at 70% 60%, rgba(255, 0, 85, 0.1), transparent 60%);
-    z-index: -2;
-    animation: nebulaFlow 60s ease-in-out infinite;
 }
 
-body::after {
-    content: "";
+/* === NEBULA LAYER 1 - Deep Background === */
+.nebula-layer {
     position: fixed;
-    inset: -30%;
+    inset: 0;
     pointer-events: none;
-    background:
-        radial-gradient(400px 300px at 60% 40%, rgba(188, 19, 254, 0.18), transparent 50%),
-        radial-gradient(350px 250px at 30% 70%, rgba(0, 212, 255, 0.15), transparent 50%);
-    z-index: -1;
-    animation: nebulaFlowReverse 45s ease-in-out infinite;
+    z-index: -5;
 }
 
-@keyframes nebulaFlow {
+.nebula-layer--deep {
+    background:
+        /* Core nebula glow */
+        radial-gradient(ellipse 80% 50% at 20% 30%,
+            rgba(88, 28, 135, 0.25) 0%,
+            transparent 50%),
+        /* Secondary purple cloud */
+        radial-gradient(ellipse 60% 40% at 75% 20%,
+            rgba(139, 69, 180, 0.18) 0%,
+            transparent 45%),
+        /* Deep blue accent */
+        radial-gradient(ellipse 70% 60% at 85% 75%,
+            rgba(30, 64, 175, 0.15) 0%,
+            transparent 50%),
+        /* Magenta hint */
+        radial-gradient(ellipse 50% 35% at 10% 80%,
+            rgba(190, 24, 93, 0.12) 0%,
+            transparent 40%);
+    opacity: 0.9;
+    will-change: transform;
+    animation: nebulaBreath1 80s ease-in-out infinite;
+}
+
+/* === NEBULA LAYER 2 - Mid-ground Clouds === */
+.nebula-layer--mid {
+    background:
+        /* Bright purple core */
+        radial-gradient(ellipse 45% 35% at 30% 45%,
+            rgba(147, 51, 234, 0.2) 0%,
+            transparent 50%),
+        /* Cyan accent */
+        radial-gradient(ellipse 55% 40% at 70% 60%,
+            rgba(6, 182, 212, 0.12) 0%,
+            transparent 45%),
+        /* Soft pink dust */
+        radial-gradient(ellipse 40% 30% at 55% 25%,
+            rgba(236, 72, 153, 0.1) 0%,
+            transparent 40%);
+    opacity: 0.85;
+    will-change: transform;
+    animation: nebulaBreath2 60s ease-in-out infinite;
+}
+
+/* === NEBULA LAYER 3 - Foreground Wisps === */
+.nebula-layer--front {
+    background:
+        /* Wispy purple */
+        radial-gradient(ellipse 35% 25% at 40% 35%,
+            rgba(168, 85, 247, 0.15) 0%,
+            transparent 50%),
+        /* Soft blue glow */
+        radial-gradient(ellipse 30% 20% at 65% 70%,
+            rgba(59, 130, 246, 0.1) 0%,
+            transparent 45%);
+    opacity: 0.7;
+    will-change: transform;
+    animation: nebulaBreath3 45s ease-in-out infinite;
+}
+
+/* === COSMIC DUST OVERLAY === */
+.cosmic-dust {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -4;
+    background-image:
+        radial-gradient(1px 1px at 10% 20%, rgba(255, 255, 255, 0.4), transparent),
+        radial-gradient(1px 1px at 25% 45%, rgba(255, 255, 255, 0.3), transparent),
+        radial-gradient(1.5px 1.5px at 40% 15%, rgba(200, 180, 255, 0.5), transparent),
+        radial-gradient(1px 1px at 55% 70%, rgba(255, 255, 255, 0.35), transparent),
+        radial-gradient(1px 1px at 70% 35%, rgba(180, 200, 255, 0.4), transparent),
+        radial-gradient(1.5px 1.5px at 85% 80%, rgba(255, 255, 255, 0.45), transparent),
+        radial-gradient(1px 1px at 15% 65%, rgba(220, 180, 255, 0.3), transparent),
+        radial-gradient(1px 1px at 90% 25%, rgba(255, 255, 255, 0.35), transparent);
+    background-size: 250px 250px;
+    animation: dustDrift 120s linear infinite;
+    opacity: 0.6;
+}
+
+/* === VIGNETTE EFFECT === */
+.vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -3;
+    background: radial-gradient(ellipse 70% 60% at 50% 50%,
+            transparent 30%,
+            rgba(8, 2, 18, 0.4) 70%,
+            rgba(8, 2, 18, 0.8) 100%);
+}
+
+/* === NEBULA BREATHING ANIMATIONS === */
+@keyframes nebulaBreath1 {
 
     0%,
     100% {
-        transform: translate(0, 0) rotate(0deg) scale(1);
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 0.9;
     }
 
     25% {
-        transform: translate(5%, -3%) rotate(1deg) scale(1.02);
+        transform: translate(3%, -2%) scale(1.03) rotate(0.5deg);
+        opacity: 0.85;
     }
 
     50% {
-        transform: translate(-3%, 5%) rotate(-1deg) scale(1.04);
+        transform: translate(-2%, 3%) scale(1.05) rotate(-0.3deg);
+        opacity: 0.95;
     }
 
     75% {
-        transform: translate(-5%, -2%) rotate(0.5deg) scale(1.01);
+        transform: translate(-3%, -1%) scale(1.02) rotate(0.2deg);
+        opacity: 0.88;
     }
 }
 
-@keyframes nebulaFlowReverse {
+@keyframes nebulaBreath2 {
 
     0%,
     100% {
-        transform: translate(0, 0) rotate(0deg);
+        transform: translate(0, 0) scale(1) rotate(0deg);
     }
 
     33% {
-        transform: translate(-4%, 3%) rotate(-0.5deg);
+        transform: translate(-4%, 2%) scale(1.04) rotate(-0.5deg);
     }
 
     66% {
-        transform: translate(3%, -4%) rotate(0.5deg);
+        transform: translate(3%, -3%) scale(1.02) rotate(0.4deg);
+    }
+}
+
+@keyframes nebulaBreath3 {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+        opacity: 0.7;
+    }
+
+    50% {
+        transform: translate(2%, 2%) scale(1.06);
+        opacity: 0.8;
+    }
+}
+
+@keyframes dustDrift {
+    0% {
+        transform: translate(0, 0);
+    }
+
+    100% {
+        transform: translate(-250px, -250px);
     }
 }
 
@@ -458,6 +578,39 @@ body.delete-mode #game-container canvas {
         position: static;
         flex-direction: row;
         margin-top: 12px;
+    }
+
+    /* Reduce nebula complexity on mobile */
+    .nebula-layer--front {
+        display: none;
+    }
+
+    .cosmic-dust {
+        opacity: 0.3;
+    }
+}
+
+/* === REDUCED MOTION ACCESSIBILITY === */
+@media (prefers-reduced-motion: reduce) {
+
+    .nebula-layer,
+    .cosmic-dust {
+        animation: none !important;
+    }
+
+    #starfield-canvas {
+        display: none;
+    }
+
+    .crystal-particle,
+    .floating-text {
+        animation-duration: 0.01ms !important;
+    }
+
+    .game-shell.shake-light,
+    .game-shell.shake-medium,
+    .game-shell.shake-heavy {
+        animation: none !important;
     }
 }
 
