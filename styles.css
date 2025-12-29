@@ -416,10 +416,6 @@ body {
     animation: handDrag 4s ease-in-out infinite;
 }
 
-body.delete-mode #game-container canvas {
-    cursor: crosshair;
-}
-
 .modal {
     position: fixed;
     inset: 0;
@@ -889,5 +885,179 @@ body.delete-mode #game-container canvas {
 
     50% {
         box-shadow: 0 0 25px rgba(0, 212, 255, 0.6), 0 0 35px rgba(188, 19, 254, 0.4);
+    }
+}
+
+/* ============================================
+   HAMMER 3x3 POWER-UP EFFECTS
+   ============================================ */
+
+/* === HAMMER SHOCKWAVE EFFECT === */
+.hammer-shockwave {
+    position: fixed;
+    pointer-events: none;
+    z-index: 1002;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 215, 0, 0.9);
+    box-shadow:
+        0 0 20px rgba(255, 215, 0, 0.8),
+        0 0 40px rgba(255, 100, 0, 0.5),
+        inset 0 0 30px rgba(255, 215, 0, 0.4);
+    animation: shockwaveExpand 0.5s ease-out forwards;
+}
+
+.hammer-shockwave::before {
+    content: '';
+    position: absolute;
+    inset: -10px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 150, 0, 0.6);
+    animation: shockwaveRing 0.5s ease-out forwards;
+}
+
+.hammer-shockwave::after {
+    content: '';
+    position: absolute;
+    inset: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(255, 215, 0, 0.8) 50%, transparent 70%);
+    animation: shockwaveCore 0.3s ease-out forwards;
+}
+
+@keyframes shockwaveExpand {
+    0% {
+        width: 20px;
+        height: 20px;
+        margin-left: -10px;
+        margin-top: -10px;
+        opacity: 1;
+    }
+
+    100% {
+        width: 180px;
+        height: 180px;
+        margin-left: -90px;
+        margin-top: -90px;
+        opacity: 0;
+        border-width: 1px;
+    }
+}
+
+@keyframes shockwaveRing {
+    0% {
+        transform: scale(0.5);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+@keyframes shockwaveCore {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(2);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(0);
+        opacity: 0;
+    }
+}
+
+/* === HAMMER IMPACT FLASH === */
+.hammer-flash {
+    position: fixed;
+    pointer-events: none;
+    z-index: 1001;
+    background: radial-gradient(circle,
+            rgba(255, 215, 0, 0.4) 0%,
+            rgba(255, 100, 0, 0.2) 40%,
+            transparent 70%);
+    animation: hammerFlash 0.4s ease-out forwards;
+}
+
+@keyframes hammerFlash {
+    0% {
+        transform: scale(0.5);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1.2);
+        opacity: 0;
+    }
+}
+
+/* === HAMMER CURSOR MODE === */
+body.delete-mode {
+    cursor: none;
+}
+
+body.delete-mode #game-container canvas {
+    cursor: none;
+}
+
+/* Custom Hammer Cursor */
+.hammer-cursor {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    font-size: 32px;
+    color: #FFD700;
+    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.8));
+    transform: translate(-8px, -8px);
+    display: none;
+}
+
+body.delete-mode .hammer-cursor {
+    display: block;
+}
+
+/* === HAMMER GRID PREVIEW (3x3 highlight) === */
+.hammer-preview {
+    position: absolute;
+    pointer-events: none;
+    border: 2px dashed rgba(255, 215, 0, 0.6);
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 8px;
+    z-index: 50;
+    transition: all 0.1s ease-out;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+/* === DESTROYED BLOCK GHOST === */
+.block-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 999;
+    border-radius: 4px;
+    animation: blockGhost 0.4s ease-out forwards;
+}
+
+@keyframes blockGhost {
+    0% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1.5) translateY(-20px);
+        opacity: 0;
     }
 }

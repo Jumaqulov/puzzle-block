@@ -333,6 +333,11 @@ const SoundManager = {
             case 'shuffle':
                 this.playTone(300, 0.08, 'triangle', 0.06);
                 break;
+            case 'hammer':
+                // Deep impact sound
+                this.playTone(80, 0.15, 'sawtooth', 0.12);
+                setTimeout(() => this.playChord([200, 400, 600], 0.2, 'sine', 0.08), 50);
+                break;
             default:
                 break;
         }
@@ -498,6 +503,71 @@ const GameJuice = {
         setTimeout(() => {
             this.showFloatingText(`+${points}`, centerX, centerY, type);
         }, 100);
+    },
+
+    // ============================================
+    // HAMMER 3x3 POWER-UP EFFECTS
+    // ============================================
+
+    // Create shockwave effect at impact point
+    createShockwave(x, y) {
+        const container = document.getElementById('game-container');
+        if (!container) return;
+
+        const rect = container.getBoundingClientRect();
+
+        // Main shockwave ring
+        const shockwave = document.createElement('div');
+        shockwave.className = 'hammer-shockwave';
+        shockwave.style.left = `${rect.left + x}px`;
+        shockwave.style.top = `${rect.top + y}px`;
+        document.body.appendChild(shockwave);
+
+        // Background flash
+        const flash = document.createElement('div');
+        flash.className = 'hammer-flash';
+        flash.style.cssText = `
+            left: ${rect.left + x - 150}px;
+            top: ${rect.top + y - 150}px;
+            width: 300px;
+            height: 300px;
+        `;
+        document.body.appendChild(flash);
+
+        // Cleanup
+        setTimeout(() => {
+            shockwave.remove();
+            flash.remove();
+        }, 600);
+    },
+
+    // Hammer impact sound
+    playHammerSound() {
+        if (typeof SoundManager !== 'undefined') {
+            SoundManager.play('hammer');
+        }
+    },
+
+    // Create staggered explosions for dramatic effect
+    createStaggeredExplosions(cells, startX, startY, cellSize, delayBetween = 30) {
+        cells.forEach((cell, index) => {
+            setTimeout(() => {
+                const worldX = startX + cell.x * cellSize + cellSize / 2;
+                const worldY = startY + cell.y * cellSize + cellSize / 2;
+                this.createExplosion(worldX, worldY, cell.color, 10);
+            }, index * delayBetween);
+        });
+    },
+
+    // Show hammer destruction score
+    showHammerScore(blocksDestroyed, x, y) {
+        const points = blocksDestroyed * 5; // 5 points per block
+        if (points > 0) {
+            setTimeout(() => {
+                this.showFloatingText(`+${points}`, x, y, blocksDestroyed >= 5 ? 'combo' : 'normal');
+            }, 200);
+        }
+        return points;
     }
 };
 
@@ -529,6 +599,19 @@ const initSplash = () => {
 };
 
 window.addEventListener('load', initSplash);
+
+// Custom Hammer Cursor Tracking
+const initHammerCursor = () => {
+    const cursor = document.getElementById('hammer-cursor');
+    if (!cursor) return;
+
+    document.addEventListener('mousemove', (e) => {
+        cursor.style.left = e.clientX + 'px';
+        cursor.style.top = e.clientY + 'px';
+    });
+};
+
+window.addEventListener('load', initHammerCursor);
 
 const BLOCK_TEXTURES = [
     { key: 'crystal_red', fill: '#FF0055', stroke: '#c00040' },
@@ -1409,25 +1492,145 @@ function create() {
         gameObject.setAlpha(0.7);
     });
 
+    // ============================================
+    // 3x3 HAMMER POWER-UP IMPLEMENTATION
+    // ============================================
+    const applyHammerEffect = (centerGridX, centerGridY) => {
+        const destroyedCells = [];
+        let totalDestroyed = 0;
+
+        // Calculate world position for shockwave center
+        const centerWorldX = startX + centerGridX * cellSize + cellSize / 2;
+        const centerWorldY = startY + centerGridY * cellSize + cellSize / 2;
+
+        // Create shockwave effect at impact point
+        GameJuice.createShockwave(centerWorldX, centerWorldY);
+        GameJuice.playHammerSound();
+
+        // Screen shake - heavy impact!
+        GameJuice.shakeScreen('heavy');
+
+        // Iterate through 3x3 area
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                const targetX = centerGridX + dx;
+                const targetY = centerGridY + dy;
+
+                // Bounds checking - skip if out of grid
+                if (targetX < 0 || targetX >= gridSize || targetY < 0 || targetY >= gridSize) {
+                    continue;
+                }
+
+                const sprite = grid[targetY][targetX];
+                if (sprite) {
+                    // Get color for explosion effect
+                    const color = sprite.texture ? GameJuice.getColor(sprite.texture.key) : '#FFFFFF';
+
+                    destroyedCells.push({
+                        x: targetX,
+                        y: targetY,
+                        color: color,
+                        sprite: sprite
+                    });
+
+                    // Remove from grid
+                    grid[targetY][targetX] = null;
+                    totalDestroyed++;
+                }
+            }
+        }
+
+        // Create staggered explosions for dramatic effect
+        if (destroyedCells.length > 0) {
+            GameJuice.createStaggeredExplosions(destroyedCells, startX, startY, cellSize, 40);
+
+            // Animate block removal with delay for each
+            destroyedCells.forEach((cell, index) => {
+                setTimeout(() => {
+                    if (cell.sprite && cell.sprite.active) {
+                        this.tweens.add({
+                            targets: cell.sprite,
+                            scale: 0,
+                            alpha: 0,
+                            angle: Phaser.Math.Between(-45, 45),
+                            duration: 250,
+                            ease: 'Back.In',
+                            onComplete: () => cell.sprite.destroy()
+                        });
+                    }
+                }, index * 40);
+            });
+        }
+
+        // Calculate and add score (5 points per destroyed block)
+        const hammerScore = totalDestroyed * 5;
+        if (hammerScore > 0) {
+            score += hammerScore;
+            if (domScoreValue) {
+                domScoreValue.textContent = String(score);
+            }
+            updateHighScore();
+            GameJuice.pulseScore();
+
+            // Show floating score
+            GameJuice.showFloatingText(`+${hammerScore}`, centerWorldX, centerWorldY - 30,
+                totalDestroyed >= 5 ? 'combo' : 'normal');
+        }
+
+        // Check for line clears after destruction (with delay for visual effect)
+        setTimeout(() => {
+            const linesCleared = checkAndClearLines();
+            if (linesCleared > 0) {
+                // Bonus message for creating lines with hammer
+                setTimeout(() => {
+                    showComboMessage('HAMMER CLEAR!');
+                }, 200);
+            }
+            checkGameOver();
+        }, destroyedCells.length * 40 + 300);
+
+        return totalDestroyed;
+    };
+
     this.input.on('pointerdown', (pointer) => {
         SoundManager.resume();
         if (!deleteMode || isGameOver) {
             return;
         }
+
         const gridX = Math.floor((pointer.x - startX) / cellSize);
         const gridY = Math.floor((pointer.y - startY) / cellSize);
+
+        // Check if click is within grid bounds
         if (gridX < 0 || gridX >= gridSize || gridY < 0 || gridY >= gridSize) {
             return;
         }
-        const sprite = grid[gridY][gridX];
-        if (!sprite) {
+
+        // Check if there's at least one block in the 3x3 area
+        let hasBlocks = false;
+        for (let dy = -1; dy <= 1 && !hasBlocks; dy++) {
+            for (let dx = -1; dx <= 1 && !hasBlocks; dx++) {
+                const tx = gridX + dx;
+                const ty = gridY + dy;
+                if (tx >= 0 && tx < gridSize && ty >= 0 && ty < gridSize && grid[ty][tx]) {
+                    hasBlocks = true;
+                }
+            }
+        }
+
+        if (!hasBlocks) {
+            // No blocks in 3x3 area - don't consume hammer
             return;
         }
-        grid[gridY][gridX] = null;
-        animateBlockRemoval(sprite);
+
+        // Apply 3x3 hammer destruction
+        applyHammerEffect(gridX, gridY);
+
+        // Reset combo streak (hammer doesn't contribute to combo)
         comboStreak = 0;
+
+        // Consume hammer - deactivate after use
         setDeleteMode(false);
-        checkGameOver();
     });
 
     this.input.on('dragend', (pointer, gameObject) => {
