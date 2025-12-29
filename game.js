@@ -231,6 +231,391 @@ document.addEventListener('DOMContentLoaded', () => {
 // Also expose globally for Yandex Games SDK integration
 window.LocalizationManager = LocalizationManager;
 
+// ============================================
+// YANDEX GAMES SDK INTEGRATION
+// ============================================
+const YandexGamesSDK = {
+    // SDK instance
+    ysdk: null,
+    player: null,
+
+    // State flags
+    isInitialized: false,
+    isAdShowing: false,
+    isAuthorized: false,
+
+    // Leaderboard name
+    leaderboardName: 'crystal_puzzle_highscore',
+
+    // Callbacks for game state
+    callbacks: {
+        onAdOpen: null,
+        onAdClose: null,
+        onRewardGranted: null
+    },
+
+    // Check if we're DEFINITELY in Yandex Games environment
+    isYandexEnvironment() {
+        // Check for Yandex-specific global that's only set in their iframe
+        if (typeof window.YandexGamesSDKEnvironment !== 'undefined') {
+            return true;
+        }
+
+        // Check URL parameters that Yandex adds
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('app-id') || urlParams.has('draft')) {
+            return true;
+        }
+
+        // Check if hostname contains yandex
+        if (window.location.hostname.includes('yandex')) {
+            return true;
+        }
+
+        return false;
+    },
+
+    // Load SDK script dynamically
+    loadSDKScript() {
+        return new Promise((resolve, reject) => {
+            // Check if already loaded
+            if (typeof YaGames !== 'undefined') {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://yandex.ru/games/sdk/v2';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    },
+
+    // ==========================================
+    // 1. INITIALIZATION
+    // ==========================================
+    async init() {
+        // First check if we're in Yandex environment
+        if (!this.isYandexEnvironment()) {
+            console.log('[YaSDK] Local development mode - SDK disabled');
+            this.initFallbackMode();
+            return false;
+        }
+
+        try {
+            // Load SDK script dynamically
+            console.log('[YaSDK] Loading SDK...');
+            await this.loadSDKScript();
+
+            // Initialize SDK
+            this.ysdk = await YaGames.init();
+            window.ysdk = this.ysdk;
+
+            console.log('[YaSDK] SDK initialized successfully');
+
+            // Get player language
+            try {
+                const lang = this.ysdk.environment?.i18n?.lang;
+                if (lang && LocalizationManager.supportedLanguages.includes(lang)) {
+                    LocalizationManager.setLanguage(lang);
+                    console.log(`[YaSDK] Language set to: ${lang}`);
+                }
+            } catch (e) { }
+
+            // Initialize player
+            await this.initPlayer();
+
+            // Load saved data
+            await this.loadGameData();
+
+            // Signal game ready
+            try {
+                this.ysdk.features?.LoadingAPI?.ready();
+            } catch (e) { }
+
+            this.isInitialized = true;
+
+            window.dispatchEvent(new CustomEvent('yandexSDKReady', {
+                detail: { sdk: this.ysdk, player: this.player }
+            }));
+
+            return true;
+
+        } catch (error) {
+            console.log('[YaSDK] Init failed, using fallback mode');
+            this.initFallbackMode();
+            return false;
+        }
+    },
+
+    // Fallback mode for local development
+    initFallbackMode() {
+        this.isInitialized = false;
+        this.ysdk = null;
+
+        window.dispatchEvent(new CustomEvent('yandexSDKReady', {
+            detail: { sdk: null, player: null }
+        }));
+    },
+
+    // ==========================================
+    // 2. PLAYER INITIALIZATION
+    // ==========================================
+    async initPlayer() {
+        if (!this.ysdk) return null;
+
+        try {
+            this.player = await this.ysdk.getPlayer({ scopes: false });
+            const mode = this.player.getMode();
+            this.isAuthorized = (mode !== 'lite');
+
+            if (this.isAuthorized) {
+                const name = this.player.getName();
+                const photo = this.player.getPhoto('medium');
+                console.log(`[YaSDK] Player: ${name}`);
+
+                window.dispatchEvent(new CustomEvent('playerAuthorized', {
+                    detail: { name, photo }
+                }));
+            }
+
+            return this.player;
+        } catch (error) {
+            console.log('[YaSDK] Player init skipped');
+            return null;
+        }
+    },
+
+    // Request authorization
+    async requestAuthorization() {
+        if (!this.ysdk) return false;
+
+        try {
+            await this.ysdk.auth.openAuthDialog();
+            await this.initPlayer();
+            return this.isAuthorized;
+        } catch (error) {
+            return false;
+        }
+    },
+
+    // ==========================================
+    // 3. REWARDED ADS (Hammer/Shuffle)
+    // ==========================================
+    async showRewardAd(rewardType) {
+        // Fallback - grant reward immediately
+        if (!this.ysdk) {
+            console.log(`[YaSDK] Dev mode: ${rewardType} activated`);
+            this.grantReward(rewardType);
+            return true;
+        }
+
+        if (this.isAdShowing) return false;
+
+        return new Promise((resolve) => {
+            this.isAdShowing = true;
+
+            this.ysdk.adv.showRewardedVideo({
+                callbacks: {
+                    onOpen: () => {
+                        SoundManager.setMuted(true);
+                        if (this.callbacks.onAdOpen) this.callbacks.onAdOpen();
+                    },
+                    onClose: (wasShown) => {
+                        this.isAdShowing = false;
+                        SoundManager.setMuted(false);
+                        if (this.callbacks.onAdClose) this.callbacks.onAdClose();
+                        resolve(wasShown);
+                    },
+                    onRewarded: () => {
+                        this.grantReward(rewardType);
+                        if (this.callbacks.onRewardGranted) {
+                            this.callbacks.onRewardGranted(rewardType);
+                        }
+                    },
+                    onError: () => {
+                        this.isAdShowing = false;
+                        SoundManager.setMuted(false);
+                        resolve(false);
+                    }
+                }
+            });
+        });
+    },
+
+    // Grant reward
+    grantReward(rewardType) {
+        switch (rewardType) {
+            case 'hammer':
+                window.dispatchEvent(new CustomEvent('activateHammer'));
+                break;
+            case 'shuffle':
+                window.dispatchEvent(new CustomEvent('activateShuffle'));
+                break;
+        }
+    },
+
+    // ==========================================
+    // 4. INTERSTITIAL ADS
+    // ==========================================
+    async showInterstitialAd() {
+        if (!this.ysdk || this.isAdShowing) return false;
+
+        return new Promise((resolve) => {
+            this.isAdShowing = true;
+
+            this.ysdk.adv.showFullscreenAdv({
+                callbacks: {
+                    onOpen: () => {
+                        SoundManager.setMuted(true);
+                        if (this.callbacks.onAdOpen) this.callbacks.onAdOpen();
+                    },
+                    onClose: (wasShown) => {
+                        this.isAdShowing = false;
+                        SoundManager.setMuted(false);
+                        if (this.callbacks.onAdClose) this.callbacks.onAdClose();
+                        resolve(wasShown);
+                    },
+                    onError: () => {
+                        this.isAdShowing = false;
+                        SoundManager.setMuted(false);
+                        resolve(false);
+                    },
+                    onOffline: () => {
+                        this.isAdShowing = false;
+                        resolve(false);
+                    }
+                }
+            });
+        });
+    },
+
+    // ==========================================
+    // 5. CLOUD SAVE / LOAD
+    // ==========================================
+    async saveGameData(data) {
+        if (!this.player || !this.isAuthorized) {
+            try {
+                localStorage.setItem('crystal_puzzle_data', JSON.stringify(data));
+            } catch (e) { }
+            return false;
+        }
+
+        try {
+            await this.player.setData(data, true);
+            return true;
+        } catch (error) {
+            try {
+                localStorage.setItem('crystal_puzzle_data', JSON.stringify(data));
+            } catch (e) { }
+            return false;
+        }
+    },
+
+    async loadGameData() {
+        if (!this.player || !this.isAuthorized) {
+            try {
+                const data = localStorage.getItem('crystal_puzzle_data');
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    window.dispatchEvent(new CustomEvent('gameDataLoaded', { detail: parsed }));
+                    return parsed;
+                }
+            } catch (e) { }
+            return null;
+        }
+
+        try {
+            const data = await this.player.getData();
+            window.dispatchEvent(new CustomEvent('gameDataLoaded', { detail: data }));
+            return data;
+        } catch (error) {
+            return null;
+        }
+    },
+
+    async saveHighScore(score) {
+        return await this.saveGameData({
+            highScore: score,
+            lastPlayed: Date.now()
+        });
+    },
+
+    // ==========================================
+    // 6. LEADERBOARD
+    // ==========================================
+    async submitScore(score) {
+        if (!this.ysdk) return false;
+
+        try {
+            const leaderboard = await this.ysdk.getLeaderboards();
+            await leaderboard.setLeaderboardScore(this.leaderboardName, score);
+            return true;
+        } catch (error) {
+            return false;
+        }
+    },
+
+    async getLeaderboardEntries(topCount = 10, includeUser = true) {
+        if (!this.ysdk) return null;
+
+        try {
+            const leaderboard = await this.ysdk.getLeaderboards();
+            return await leaderboard.getLeaderboardEntries(this.leaderboardName, {
+                quantityTop: topCount,
+                quantityAround: includeUser ? 3 : 0,
+                includeUser: includeUser
+            });
+        } catch (error) {
+            return null;
+        }
+    },
+
+    // ==========================================
+    // 7. GAME LIFECYCLE
+    // ==========================================
+    onGameStart() { },
+
+    async onGameOver(score, highScore) {
+        await this.saveHighScore(highScore);
+        await this.submitScore(highScore);
+
+        // Show interstitial ad after delay
+        if (this.ysdk) {
+            setTimeout(() => this.showInterstitialAd(), 500);
+        }
+    },
+
+    // ==========================================
+    // 8. UTILITY
+    // ==========================================
+    isYandexGames() {
+        return this.ysdk !== null;
+    },
+
+    getDeviceType() {
+        if (!this.ysdk) return 'desktop';
+        try {
+            return this.ysdk.deviceInfo.type;
+        } catch (e) {
+            return 'desktop';
+        }
+    },
+
+    canShowAds() {
+        return this.ysdk && !this.isAdShowing;
+    }
+};
+
+// Initialize SDK on page load
+window.addEventListener('load', () => {
+    YandexGamesSDK.init();
+});
+
+// Expose globally
+window.YandexGamesSDK = YandexGamesSDK;
+
 const CELL_SIZE = 50;
 
 // ============================================
@@ -482,8 +867,10 @@ window.addEventListener('load', () => {
 const SoundManager = {
     context: null,
     enabled: true,
+    muted: false,
     initialized: false,
     files: {},
+
     init() {
         if (this.initialized) {
             return;
@@ -503,14 +890,39 @@ const SoundManager = {
             this.context = new AudioContext();
         }
     },
+
+    // Mute/unmute for ads
+    setMuted(muted) {
+        this.muted = muted;
+        console.log(`[Sound] Muted: ${muted}`);
+
+        // Mute all audio files
+        Object.values(this.files).forEach((audio) => {
+            audio.muted = muted;
+        });
+
+        // Suspend/resume audio context
+        if (this.context) {
+            if (muted && this.context.state === 'running') {
+                this.context.suspend();
+            } else if (!muted && this.context.state === 'suspended') {
+                this.context.resume();
+            }
+        }
+    },
+
+    isMuted() {
+        return this.muted;
+    },
+
     resume() {
         this.init();
-        if (this.context && this.context.state === 'suspended') {
+        if (this.context && this.context.state === 'suspended' && !this.muted) {
             this.context.resume();
         }
     },
     playTone(freq, duration, type = 'sine', gain = 0.08) {
-        if (!this.enabled) {
+        if (!this.enabled || this.muted) {
             return;
         }
         this.init();
@@ -533,6 +945,9 @@ const SoundManager = {
         freqs.forEach((freq) => this.playTone(freq, duration, type, gain));
     },
     playFile(name) {
+        if (this.muted) {
+            return false;
+        }
         const audio = this.files[name];
         if (!audio) {
             return false;
@@ -543,7 +958,7 @@ const SoundManager = {
         return true;
     },
     play(name) {
-        if (!this.enabled) {
+        if (!this.enabled || this.muted) {
             return;
         }
         this.init();
@@ -1172,6 +1587,20 @@ function create() {
         highScore = 0;
     }
 
+    // Listen for cloud data loaded (from Yandex SDK)
+    window.addEventListener('gameDataLoaded', (e) => {
+        if (e.detail && e.detail.highScore) {
+            const cloudHighScore = Number(e.detail.highScore);
+            if (!Number.isNaN(cloudHighScore) && cloudHighScore > highScore) {
+                highScore = cloudHighScore;
+                if (domHighValue) {
+                    domHighValue.textContent = String(highScore);
+                }
+                console.log(`[Game] High score loaded from cloud: ${highScore}`);
+            }
+        }
+    });
+
     if (domScoreValue) {
         domScoreValue.textContent = String(score);
     }
@@ -1672,6 +2101,10 @@ function create() {
         setDeleteMode(false);
         stillActive.forEach((shape) => shape.disableInteractive());
         SoundManager.play('gameover');
+
+        // Notify Yandex SDK about game over (saves score, shows interstitial ad)
+        YandexGamesSDK.onGameOver(score, highScore);
+
         showGameOver();
     };
 
@@ -1764,24 +2197,49 @@ function create() {
         };
     }
 
+    // ==========================================
+    // POWER-UP BUTTONS WITH REWARDED ADS
+    // ==========================================
+
+    // Activate hammer (called after ad or in dev mode)
+    const activateHammer = () => {
+        if (isGameOver) return;
+        setDeleteMode(true);
+        SoundManager.play('drag');
+    };
+
+    // Activate shuffle (called after ad or in dev mode)
+    const activateShuffle = () => {
+        if (isGameOver) return;
+        activeShapes.forEach((shape) => shape.destroy());
+        activeShapes.length = 0;
+        spawnAllShapes();
+        SoundManager.play('shuffle');
+    };
+
+    // Listen for SDK events
+    window.addEventListener('activateHammer', activateHammer);
+    window.addEventListener('activateShuffle', activateShuffle);
+
     if (domHammer) {
-        domHammer.onclick = () => {
-            if (isGameOver) {
+        domHammer.onclick = async () => {
+            if (isGameOver || deleteMode) {
                 return;
             }
-            setDeleteMode(!deleteMode);
+
+            // Show rewarded ad (or activate directly in dev mode)
+            await YandexGamesSDK.showRewardAd('hammer');
         };
     }
 
     if (domShuffle) {
-        domShuffle.onclick = () => {
+        domShuffle.onclick = async () => {
             if (isGameOver) {
                 return;
             }
-            activeShapes.forEach((shape) => shape.destroy());
-            activeShapes.length = 0;
-            spawnAllShapes();
-            SoundManager.play('shuffle');
+
+            // Show rewarded ad (or activate directly in dev mode)
+            await YandexGamesSDK.showRewardAd('shuffle');
         };
     }
 
