@@ -1015,25 +1015,102 @@ function create() {
         container.setScale(previewScale);
 
         def.blocks.forEach(([bx, by]) => {
-            const block = this.add.image(
-                (bx - def.minX) * cellSize + offsetX,
-                (by - def.minY) * cellSize + offsetY,
-                textureKey
-            );
+            const blockX = (bx - def.minX) * cellSize + offsetX;
+            const blockY = (by - def.minY) * cellSize + offsetY;
+
+            const block = this.add.image(blockX, blockY, textureKey);
             block.setOrigin(0.5, 0.5);
-            block.setData('offsetX', block.x);
-            block.setData('offsetY', block.y);
+            block.setData('offsetX', blockX);
+            block.setData('offsetY', blockY);
+            block.setData('parentContainer', container);
+
+            // Har bir blokni interactive qilish
+            block.setInteractive({ useHandCursor: true, pixelPerfect: false });
+            block.input.hitArea.setSize(cellSize + 10, cellSize + 10);
+
             container.add(block);
         });
 
         container.setSize(shapeWidth, shapeHeight);
-        container.setInteractive(
-            new Phaser.Geom.Rectangle(-shapeWidth / 2, -shapeHeight / 2, shapeWidth, shapeHeight),
-            Phaser.Geom.Rectangle.Contains
-        );
-        this.input.setDraggable(container);
         activeShapes.push(container);
     };
+
+    // Global pointerdown - blok bosilganda uning containerini drag qilish
+    let draggedContainer = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+
+    this.input.on('gameobjectdown', (pointer, gameObject) => {
+        if (deleteMode || isGameOver) return;
+
+        const container = gameObject.getData('parentContainer');
+        if (!container || !activeShapes.includes(container)) return;
+
+        SoundManager.resume();
+        SoundManager.play('drag');
+
+        draggedContainer = container;
+        draggedContainer.setDepth(depth.dragging);
+        draggedContainer.setScale(1);
+
+        // Cursor pozitsiyasiga olib kelish
+        draggedContainer.x = pointer.x;
+        draggedContainer.y = pointer.y;
+    });
+
+    this.input.on('pointermove', (pointer) => {
+        if (!draggedContainer) return;
+
+        draggedContainer.x = pointer.x;
+        draggedContainer.y = pointer.y;
+        draggedContainer.setAlpha(0.7);
+    });
+
+    this.input.on('pointerup', (pointer) => {
+        if (!draggedContainer || isGameOver) {
+            draggedContainer = null;
+            return;
+        }
+
+        const container = draggedContainer;
+        draggedContainer = null;
+
+        const placements = tryPlaceShape(container);
+
+        if (!placements) {
+            // Qaytarish
+            this.tweens.add({
+                targets: container,
+                x: container.getData('homeX'),
+                y: container.getData('homeY'),
+                duration: 220,
+                ease: 'Sine.easeInOut',
+                onComplete: () => {
+                    container.setAlpha(1);
+                    container.setDepth(depth.dock);
+                    container.setScale(previewScale);
+                }
+            });
+            return;
+        }
+
+        const textureKey = container.getData('textureKey') || blockTextureKeys[0];
+        snapAndPlace(container, placements, textureKey);
+        SoundManager.play('place');
+        checkAndClearLines();
+
+        const index = activeShapes.indexOf(container);
+        if (index !== -1) {
+            activeShapes.splice(index, 1);
+        }
+        container.destroy();
+
+        if (activeShapes.length === 0) {
+            spawnAllShapes();
+        }
+
+        checkGameOver();
+    });
 
     const spawnAllShapes = () => {
         const defs = pickShapeSet();
@@ -1471,27 +1548,6 @@ function create() {
         };
     }
 
-    this.input.on('dragstart', (pointer, gameObject) => {
-        if (isGameOver || deleteMode) {
-            return;
-        }
-        SoundManager.resume();
-        SoundManager.play('drag');
-        gameObject.setDepth(depth.dragging);
-        gameObject.setScale(1);
-        gameObject.x = pointer.x;
-        gameObject.y = pointer.y;
-    });
-
-    this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
-        if (isGameOver || deleteMode) {
-            return;
-        }
-        gameObject.x = dragX;
-        gameObject.y = dragY;
-        gameObject.setAlpha(0.7);
-    });
-
     // ============================================
     // 3x3 HAMMER POWER-UP IMPLEMENTATION
     // ============================================
@@ -1631,45 +1687,5 @@ function create() {
 
         // Consume hammer - deactivate after use
         setDeleteMode(false);
-    });
-
-    this.input.on('dragend', (pointer, gameObject) => {
-        if (isGameOver || deleteMode) {
-            return;
-        }
-        const placements = tryPlaceShape(gameObject);
-
-        if (!placements) {
-            this.tweens.add({
-                targets: gameObject,
-                x: gameObject.getData('homeX'),
-                y: gameObject.getData('homeY'),
-                duration: 220,
-                ease: 'Sine.easeInOut',
-                onComplete: () => {
-                    gameObject.setAlpha(1);
-                    gameObject.setDepth(depth.dock);
-                    gameObject.setScale(previewScale);
-                }
-            });
-            return;
-        }
-
-        const textureKey = gameObject.getData('textureKey') || blockTextureKeys[0];
-        snapAndPlace(gameObject, placements, textureKey);
-        SoundManager.play('place');
-        checkAndClearLines();
-
-        const index = activeShapes.indexOf(gameObject);
-        if (index !== -1) {
-            activeShapes.splice(index, 1);
-        }
-        gameObject.destroy();
-
-        if (activeShapes.length === 0) {
-            spawnAllShapes();
-        }
-
-        checkGameOver();
     });
 }
