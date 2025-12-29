@@ -3,11 +3,11 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Ancient Treasures - Dev Mode</title>
+    <title>Crystal Puzzle</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&family=Orbitron:wght@400;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&family=Orbitron:wght@400;600;700&family=Noto+Sans:wght@400;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -30,22 +30,23 @@
 
     <div class="splash is-visible" id="splash" aria-hidden="true">
         <div class="splash__panel">
-            <div class="splash__logo">CRYSTAL PUZZLE</div>
+            <div class="splash__logo" data-i18n="game_title">CRYSTAL PUZZLE</div>
             <div class="splash__bar">
                 <div class="splash__bar-fill" id="splash-bar"></div>
             </div>
             <div class="splash__percent" id="splash-percent">0%</div>
+            <div class="splash__loading" data-i18n="loading">Yuklanmoqda...</div>
         </div>
     </div>
 
     <div class="game-shell">
         <div class="side-hud" aria-label="Statistika">
             <div class="side-hud__group">
-                <div class="side-hud__label" id="high-score-label">Rekord</div>
+                <div class="side-hud__label" id="high-score-label" data-i18n="record_label">Rekord</div>
                 <div class="side-hud__value" id="high-score-value">0</div>
             </div>
             <div class="side-hud__group">
-                <div class="side-hud__label">Ochko</div>
+                <div class="side-hud__label" data-i18n="score_label">Ochko</div>
                 <div class="side-hud__value side-hud__value--score" id="score-value">0</div>
             </div>
         </div>
@@ -59,14 +60,14 @@
                 <span class="powerup__icon" aria-hidden="true">
                     <i class="ph ph-hammer"></i>
                 </span>
-                <span class="powerup__label">Hammer</span>
+                <span class="powerup__label" data-i18n="hammer_tool">Bolg'a</span>
                 <span class="powerup__badge">AD</span>
             </button>
             <button class="powerup" id="power-shuffle" type="button">
                 <span class="powerup__icon" aria-hidden="true">
                     <i class="ph ph-shuffle"></i>
                 </span>
-                <span class="powerup__label">Shuffle</span>
+                <span class="powerup__label" data-i18n="shuffle_tool">Aralashtirish</span>
                 <span class="powerup__badge">AD</span>
             </button>
         </div>
@@ -74,11 +75,34 @@
 
     <div class="modal" id="gameover" role="dialog" aria-modal="true">
         <div class="modal-card">
-            <div class="modal-title">O'yin tugadi</div>
+            <div class="modal-title" data-i18n="game_over_title">O'yin tugadi</div>
             <div class="modal-actions">
-                <button class="btn btn--pulse" type="button">Qayta boshlash</button>
-                <button class="btn btn--ghost" id="share-score" type="button">Share Score</button>
+                <button class="btn btn--pulse" id="restart-btn" type="button" data-i18n="restart_button">Qayta
+                    boshlash</button>
+                <button class="btn btn--ghost" id="share-score" type="button" data-i18n="share_button">Ulashish</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Language Selector -->
+    <div class="language-selector" id="lang-selector">
+        <button class="lang-toggle" id="lang-toggle">
+            <span class="lang-current" id="lang-current">UZ</span>
+            <i class="ph ph-caret-down"></i>
+        </button>
+        <div class="lang-dropdown" id="lang-dropdown">
+            <button class="lang-option" data-lang="uz">
+                <span class="lang-flag">🇺🇿</span>
+                <span class="lang-name">O'zbek</span>
+            </button>
+            <button class="lang-option" data-lang="ru">
+                <span class="lang-flag">🇷🇺</span>
+                <span class="lang-name">Русский</span>
+            </button>
+            <button class="lang-option" data-lang="en">
+                <span class="lang-flag">🇺🇸</span>
+                <span class="lang-name">English</span>
+            </button>
         </div>
     </div>
 

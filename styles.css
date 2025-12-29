@@ -8,6 +8,10 @@
     --nebula-purple: rgba(188, 19, 254, 0.15);
     --nebula-blue: rgba(0, 150, 255, 0.12);
     --nebula-magenta: rgba(255, 0, 100, 0.08);
+    /* Font stacks with Cyrillic support */
+    --font-display: "Orbitron", "Exo 2", "Noto Sans", sans-serif;
+    --font-body: "Exo 2", "Noto Sans", sans-serif;
+    --font-ui: "Noto Sans", "Exo 2", sans-serif;
 }
 
 *,
@@ -25,9 +29,22 @@ body {
     align-items: flex-start;
     padding: 24px;
     color: #ffffff;
-    font-family: "Exo 2", "Orbitron", sans-serif;
+    font-family: var(--font-body);
     background: var(--bg-deep);
     overflow-x: hidden;
+}
+
+/* Cyrillic-specific font adjustments */
+html[lang="ru"] .splash__logo,
+html[lang="ru"] .modal-title {
+    font-family: var(--font-ui);
+    letter-spacing: 2px;
+}
+
+html[lang="ru"] .powerup__label,
+html[lang="ru"] .btn {
+    font-family: var(--font-ui);
+    font-weight: 600;
 }
 
 /* ============================================
@@ -1060,4 +1077,159 @@ body.delete-mode .hammer-cursor {
         transform: scale(1.5) translateY(-20px);
         opacity: 0;
     }
+}
+
+/* ============================================
+   LANGUAGE SELECTOR - Dropdown Design
+   ============================================ */
+.language-selector {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 100;
+}
+
+.lang-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(15, 5, 29, 0.85);
+    border: 1px solid rgba(188, 19, 254, 0.4);
+    border-radius: 10px;
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.lang-toggle:hover {
+    background: rgba(188, 19, 254, 0.2);
+    border-color: rgba(188, 19, 254, 0.6);
+    box-shadow: 0 4px 20px rgba(188, 19, 254, 0.3);
+}
+
+.lang-toggle i {
+    font-size: 12px;
+    opacity: 0.7;
+    transition: transform 0.25s ease;
+}
+
+.language-selector.open .lang-toggle i {
+    transform: rotate(180deg);
+}
+
+.lang-current {
+    background: linear-gradient(135deg, var(--glow), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 1px;
+}
+
+.lang-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 140px;
+    background: rgba(15, 5, 29, 0.95);
+    border: 1px solid rgba(188, 19, 254, 0.4);
+    border-radius: 12px;
+    padding: 6px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.25s ease;
+    backdrop-filter: blur(15px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 20px rgba(188, 19, 254, 0.2);
+}
+
+.language-selector.open .lang-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.lang-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.8);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.lang-option:hover {
+    background: rgba(188, 19, 254, 0.2);
+    color: #fff;
+}
+
+.lang-option.active {
+    background: rgba(188, 19, 254, 0.3);
+    color: #fff;
+}
+
+.lang-option.active::after {
+    content: '';
+    margin-left: auto;
+    width: 6px;
+    height: 6px;
+    background: var(--cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--cyan);
+}
+
+.lang-flag {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.lang-name {
+    flex: 1;
+}
+
+/* Mobile adjustments */
+@media (max-width: 540px) {
+    .language-selector {
+        top: 10px;
+        right: 10px;
+    }
+
+    .lang-toggle {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .lang-dropdown {
+        min-width: 130px;
+    }
+
+    .lang-option {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+}
+
+/* ============================================
+   SPLASH LOADING TEXT
+   ============================================ */
+.splash__loading {
+    margin-top: 12px;
+    font-family: 'Noto Sans', 'Exo 2', sans-serif;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 1px;
 }

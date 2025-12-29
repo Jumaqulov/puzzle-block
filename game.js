@@ -1,3 +1,236 @@
+// ============================================
+// LOCALIZATION MANAGER - Multi-language Support
+// ============================================
+const LocalizationManager = {
+    // Supported languages
+    supportedLanguages: ['en', 'ru', 'uz'],
+
+    // Current language
+    currentLang: 'uz',
+
+    // Translation data
+    translations: {
+        en: {
+            game_title: 'CRYSTAL PUZZLE',
+            loading: 'Loading...',
+            score_label: 'Score',
+            record_label: 'Record',
+            game_over_title: 'Game Over',
+            restart_button: 'Restart',
+            share_button: 'Share',
+            hammer_tool: 'Hammer',
+            shuffle_tool: 'Shuffle',
+            new_record: 'NEW RECORD!',
+            combo_text: 'COMBO',
+            excellent: 'EXCELLENT!',
+            hammer_clear: 'HAMMER CLEAR!'
+        },
+        ru: {
+            game_title: 'КРИСТАЛЬНЫЙ ПАЗЛ',
+            loading: 'Загрузка...',
+            score_label: 'Счёт',
+            record_label: 'Рекорд',
+            game_over_title: 'Игра окончена',
+            restart_button: 'Заново',
+            share_button: 'Поделиться',
+            hammer_tool: 'Молоток',
+            shuffle_tool: 'Перемешать',
+            new_record: 'НОВЫЙ РЕКОРД!',
+            combo_text: 'КОМБО',
+            excellent: 'ОТЛИЧНО!',
+            hammer_clear: 'УДАР МОЛОТКА!'
+        },
+        uz: {
+            game_title: 'KRISTAL PAZL',
+            loading: 'Yuklanmoqda...',
+            score_label: 'Ochko',
+            record_label: 'Rekord',
+            game_over_title: "O'yin tugadi",
+            restart_button: 'Qayta boshlash',
+            share_button: 'Ulashish',
+            hammer_tool: "Bolg'a",
+            shuffle_tool: 'Aralashtirish',
+            new_record: 'YANGI REKORD!',
+            combo_text: 'KOMBO',
+            excellent: "A'LO!",
+            hammer_clear: "BOLG'A ZARBI!"
+        }
+    },
+
+    // Initialize localization
+    init() {
+        const detectedLang = this.detectLanguage();
+        this.setLanguage(detectedLang);
+        this.initLanguageSelector();
+        console.log(`[i18n] Language set to: ${this.currentLang}`);
+    },
+
+    // Detect user's preferred language
+    detectLanguage() {
+        // 1. Check Yandex Games SDK first
+        if (typeof YaGames !== 'undefined' && window.ysdk) {
+            try {
+                const yandexLang = window.ysdk.environment.i18n.lang;
+                if (yandexLang && this.supportedLanguages.includes(yandexLang)) {
+                    console.log(`[i18n] Yandex SDK language: ${yandexLang}`);
+                    return yandexLang;
+                }
+            } catch (e) {
+                console.log('[i18n] Yandex SDK not available');
+            }
+        }
+
+        // 2. Check localStorage for saved preference
+        const savedLang = localStorage.getItem('crystal_puzzle_lang');
+        if (savedLang && this.supportedLanguages.includes(savedLang)) {
+            console.log(`[i18n] Saved language: ${savedLang}`);
+            return savedLang;
+        }
+
+        // 3. Detect from browser
+        const browserLang = navigator.language || navigator.userLanguage || 'en';
+        const langCode = browserLang.split('-')[0].toLowerCase();
+
+        // Map common language codes
+        const langMap = {
+            'en': 'en',
+            'ru': 'ru',
+            'uz': 'uz',
+            'uk': 'ru', // Ukrainian -> Russian fallback
+            'be': 'ru', // Belarusian -> Russian fallback
+            'kk': 'ru', // Kazakh -> Russian fallback
+        };
+
+        const mappedLang = langMap[langCode];
+        if (mappedLang && this.supportedLanguages.includes(mappedLang)) {
+            console.log(`[i18n] Browser language: ${mappedLang}`);
+            return mappedLang;
+        }
+
+        // 4. Default to Uzbek
+        return 'uz';
+    },
+
+    // Set language and update UI
+    setLanguage(lang) {
+        if (!this.supportedLanguages.includes(lang)) {
+            console.warn(`[i18n] Unsupported language: ${lang}, falling back to uz`);
+            lang = 'uz';
+        }
+
+        this.currentLang = lang;
+        localStorage.setItem('crystal_puzzle_lang', lang);
+        document.documentElement.lang = lang;
+
+        // Update all translatable elements
+        this.updateAllElements();
+
+        // Update language selector active state
+        this.updateSelectorState();
+
+        // Dispatch custom event for other components
+        window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
+    },
+
+    // Get translation for a key
+    t(key, fallback = '') {
+        const translations = this.translations[this.currentLang];
+        if (translations && translations[key]) {
+            return translations[key];
+        }
+        // Fallback to English, then to fallback parameter
+        const enTranslations = this.translations['en'];
+        return (enTranslations && enTranslations[key]) || fallback || key;
+    },
+
+    // Update all DOM elements with data-i18n attribute
+    updateAllElements() {
+        const elements = document.querySelectorAll('[data-i18n]');
+        elements.forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            const translation = this.t(key);
+            if (translation) {
+                el.textContent = translation;
+            }
+        });
+
+        // Update document title
+        document.title = this.t('game_title', 'Crystal Puzzle');
+    },
+
+    // Initialize language selector buttons
+    initLanguageSelector() {
+        const selector = document.getElementById('lang-selector');
+        const toggle = document.getElementById('lang-toggle');
+        const dropdown = document.getElementById('lang-dropdown');
+        const currentLang = document.getElementById('lang-current');
+
+        if (!selector || !toggle) return;
+
+        // Toggle dropdown
+        toggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selector.classList.toggle('open');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!selector.contains(e.target)) {
+                selector.classList.remove('open');
+            }
+        });
+
+        // Language option clicks
+        const options = selector.querySelectorAll('.lang-option');
+        options.forEach(option => {
+            option.addEventListener('click', () => {
+                const lang = option.getAttribute('data-lang');
+                if (lang) {
+                    this.setLanguage(lang);
+                    selector.classList.remove('open');
+                }
+            });
+        });
+
+        this.updateSelectorState();
+    },
+
+    // Update active state of language buttons
+    updateSelectorState() {
+        const currentLangEl = document.getElementById('lang-current');
+        const options = document.querySelectorAll('.lang-option');
+
+        // Update current language display
+        if (currentLangEl) {
+            currentLangEl.textContent = this.currentLang.toUpperCase();
+        }
+
+        // Update active option
+        options.forEach(option => {
+            const lang = option.getAttribute('data-lang');
+            option.classList.toggle('active', lang === this.currentLang);
+        });
+    },
+
+    // Get current language
+    getCurrentLanguage() {
+        return this.currentLang;
+    },
+
+    // Check if current language is RTL (for future Arabic support)
+    isRTL() {
+        return false; // Currently no RTL languages supported
+    }
+};
+
+// Initialize localization on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    LocalizationManager.init();
+});
+
+// Also expose globally for Yandex Games SDK integration
+window.LocalizationManager = LocalizationManager;
+
 const CELL_SIZE = 50;
 
 // ============================================
@@ -1180,6 +1413,8 @@ function create() {
             domHighLabel.classList.remove('record-glow');
             void domHighLabel.offsetWidth;
             domHighLabel.classList.add('record-glow');
+            // Show new record message
+            showComboMessage(LocalizationManager.t('new_record', 'NEW RECORD!'));
         }
         try {
             localStorage.setItem('ancient_treasures_high_score', String(highScore));
@@ -1388,9 +1623,11 @@ function create() {
             GameJuice.showFloatingText(`+${earnedPoints}`, centerX, centerY - 50, textType);
         }, 150);
 
-        // Show combo message
+        // Show combo message with localization
         if (multiplier >= 2) {
-            const label = multiplier >= 4 ? `EXCELLENT! x${multiplier}` : `COMBO x${multiplier}`;
+            const comboText = LocalizationManager.t('combo_text', 'COMBO');
+            const excellentText = LocalizationManager.t('excellent', 'EXCELLENT!');
+            const label = multiplier >= 4 ? `${excellentText} x${multiplier}` : `${comboText} x${multiplier}`;
             showComboMessage(label);
         }
         return cleared;
@@ -1639,7 +1876,7 @@ function create() {
             if (linesCleared > 0) {
                 // Bonus message for creating lines with hammer
                 setTimeout(() => {
-                    showComboMessage('HAMMER CLEAR!');
+                    showComboMessage(LocalizationManager.t('hammer_clear', 'HAMMER CLEAR!'));
                 }, 200);
             }
             checkGameOver();
