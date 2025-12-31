@@ -26,19 +26,19 @@ const LocalizationManager = {
             hammer_clear: 'HAMMER CLEAR!'
         },
         ru: {
-            game_title: 'КРИСТАЛЬНЫЙ ПАЗЛ',
+            game_title: 'КРИСТАЛЛ ПАЗЛ',
             loading: 'Загрузка...',
             score_label: 'Счёт',
             record_label: 'Рекорд',
             game_over_title: 'Игра окончена',
-            restart_button: 'Заново',
+            restart_button: 'Начать заново',
             share_button: 'Поделиться',
             hammer_tool: 'Молоток',
             shuffle_tool: 'Перемешать',
             new_record: 'НОВЫЙ РЕКОРД!',
             combo_text: 'КОМБО',
             excellent: 'ОТЛИЧНО!',
-            hammer_clear: 'УДАР МОЛОТКА!'
+            hammer_clear: 'УДАР МОЛОТОМ!'
         },
         uz: {
             game_title: 'KRISTAL PAZL',
