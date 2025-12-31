@@ -1271,11 +1271,15 @@ const BLOCK_TEXTURES = [
 
 const config = {
     type: Phaser.AUTO,
-    width: 450,
-    height: 700,
     backgroundColor: '#0F051D',
     parent: 'game-container',
     pixelArt: false,
+    width: 450,
+    height: 700,
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH
+    },
     scene: { preload: preload, create: create }
 };
 
