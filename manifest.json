@@ -1,0 +1,34 @@
+{
+  "name": "Crystal Puzzle",
+  "short_name": "Crystal",
+  "description": "Kristallar bilan ajoyib mantiqiy o'yin. / A fascinating puzzle game with crystals.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0F051D",
+  "theme_color": "#0F051D",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "games",
+    "puzzle",
+    "casual"
+  ],
+  "i18n": {
+    "uz": {
+      "name": "Kristal Pazl",
+      "description": "Kristallar bilan ajoyib mantiqiy o'yin."
+    },
+    "ru": {
+      "name": "Кристалл Пазл",
+      "description": "Увлекательная игра-головоломка с кристаллами."
+    }
+  },
+  "prefer_related_applications": false
+}
