@@ -456,6 +456,7 @@ html[lang="ru"] .btn {
     pointer-events: none;
     backdrop-filter: blur(15px);
     transition: opacity 0.25s ease;
+    z-index: 100;
 }
 
 .modal.is-visible {

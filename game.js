@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // LOCALIZATION MANAGER - Multi-language Support
 // ============================================
 const LocalizationManager = {
@@ -26,19 +26,19 @@ const LocalizationManager = {
             hammer_clear: 'HAMMER CLEAR!'
         },
         ru: {
-            game_title: 'КРИСТАЛЛ ПАЗЛ',
-            loading: 'Загрузка...',
-            score_label: 'Счёт',
-            record_label: 'Рекорд',
-            game_over_title: 'Игра окончена',
-            restart_button: 'Начать заново',
-            share_button: 'Поделиться',
-            hammer_tool: 'Молоток',
-            shuffle_tool: 'Перемешать',
-            new_record: 'НОВЫЙ РЕКОРД!',
-            combo_text: 'КОМБО',
-            excellent: 'ОТЛИЧНО!',
-            hammer_clear: 'УДАР МОЛОТОМ!'
+            game_title: 'РљР РРЎРўРђР›Р› РџРђР—Р›',
+            loading: 'Р—Р°РіСЂСѓР·РєР°...',
+            score_label: 'РЎС‡С‘С‚',
+            record_label: 'Р РµРєРѕСЂРґ',
+            game_over_title: 'РРіСЂР° РѕРєРѕРЅС‡РµРЅР°',
+            restart_button: 'РќР°С‡Р°С‚СЊ Р·Р°РЅРѕРІРѕ',
+            share_button: 'РџРѕРґРµР»РёС‚СЊСЃСЏ',
+            hammer_tool: 'РњРѕР»РѕС‚РѕРє',
+            shuffle_tool: 'РџРµСЂРµРјРµС€Р°С‚СЊ',
+            new_record: 'РќРћР’Р«Р™ Р Р•РљРћР Р”!',
+            combo_text: 'РљРћРњР‘Рћ',
+            excellent: 'РћРўР›РР§РќРћ!',
+            hammer_clear: 'РЈР”РђР  РњРћР›РћРўРћРњ!'
         },
         uz: {
             game_title: 'KRISTAL PAZL',
@@ -1571,13 +1571,35 @@ function create() {
     };
 
     const shareScore = () => {
-        const text = `Crystal Puzzle - Ochko: ${score}`;
+        const text = `Crystal Puzzle o'yinida mening natijam: ${score} ochko! Senda qancha?`;
+        const shareData = {
+            title: 'Crystal Puzzle',
+            text: text,
+            url: window.location.href
+        };
+
+        // Web Share API ni sinab ko'ramiz
         if (navigator.share) {
-            navigator.share({ title: 'Crystal Puzzle', text }).catch(() => { });
-            return;
+            navigator.share(shareData)
+                .then(() => console.log('Ulashish muvaffaqiyatli'))
+                .catch((err) => {
+                    console.log('Ulashish bekor qilindi yoki xato:', err);
+                    // Agar xato bo'lsa (masalan, desktopda bekor qilinsa), clipboardga nusxalaymiz
+                    copyToClipboard(text);
+                });
+        } else {
+            // Agar brauzer share ni qo'llab-quvvatlamasa, clipboardga nusxalaymiz
+            copyToClipboard(text);
         }
+    };
+
+    const copyToClipboard = (text) => {
         if (navigator.clipboard) {
-            navigator.clipboard.writeText(text).catch(() => { });
+            navigator.clipboard.writeText(text).then(() => {
+                if (typeof GameJuice !== 'undefined') {
+                    GameJuice.showFloatingText("Nusxalandi!", window.innerWidth / 2, window.innerHeight * 0.7, 'combo');
+                }
+            }).catch(() => { });
         }
     };
 
