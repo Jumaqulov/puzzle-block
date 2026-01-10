@@ -20,19 +20,29 @@
     box-sizing: border-box;
 }
 
+html,
 body {
     margin: 0;
-    min-height: 100vh;
-    position: relative;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-deep);
+    color: #ffffff;
+    font-family: var(--font-body);
+    overflow: hidden;
+    position: fixed;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+body {
     display: flex;
     justify-content: center;
     align-items: flex-start;
     padding: 24px;
     padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-    color: #ffffff;
-    font-family: var(--font-body);
-    background: var(--bg-deep);
-    overflow-x: hidden;
 }
 
 /* Cyrillic-specific font adjustments */

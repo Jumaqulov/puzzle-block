@@ -26,19 +26,19 @@ const LocalizationManager = {
             hammer_clear: 'HAMMER CLEAR!'
         },
         ru: {
-            game_title: 'РљР РРЎРўРђР›Р› РџРђР—Р›',
-            loading: 'Р—Р°РіСЂСѓР·РєР°...',
-            score_label: 'РЎС‡С‘С‚',
-            record_label: 'Р РµРєРѕСЂРґ',
-            game_over_title: 'РРіСЂР° РѕРєРѕРЅС‡РµРЅР°',
-            restart_button: 'РќР°С‡Р°С‚СЊ Р·Р°РЅРѕРІРѕ',
-            share_button: 'РџРѕРґРµР»РёС‚СЊСЃСЏ',
-            hammer_tool: 'РњРѕР»РѕС‚РѕРє',
-            shuffle_tool: 'РџРµСЂРµРјРµС€Р°С‚СЊ',
-            new_record: 'РќРћР’Р«Р™ Р Р•РљРћР Р”!',
-            combo_text: 'РљРћРњР‘Рћ',
-            excellent: 'РћРўР›РР§РќРћ!',
-            hammer_clear: 'РЈР”РђР  РњРћР›РћРўРћРњ!'
+            game_title: 'КРИСТАЛЛ ПАЗЛ',
+            loading: 'Загрузка...',
+            score_label: 'Счёт',
+            record_label: 'Рекорд',
+            game_over_title: 'Игра окончена',
+            restart_button: 'Начать заново',
+            share_button: 'Поделиться',
+            hammer_tool: 'Молоток',
+            shuffle_tool: 'Перемешать',
+            new_record: 'НОВЫЙ РЕКОРД!',
+            combo_text: 'КОМБО',
+            excellent: 'ОТЛИЧНО!',
+            hammer_clear: 'УДАР МОЛОТОМ!'
         },
         uz: {
             game_title: 'KRISTAL PAZL',
@@ -275,23 +275,6 @@ const YandexGamesSDK = {
         return false;
     },
 
-    // Load SDK script dynamically
-    loadSDKScript() {
-        return new Promise((resolve, reject) => {
-            // Check if already loaded
-            if (typeof YaGames !== 'undefined') {
-                resolve();
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.src = 'https://yandex.ru/games/sdk/v2';
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
-    },
-
     // ==========================================
     // 1. INITIALIZATION
     // ==========================================
@@ -304,9 +287,12 @@ const YandexGamesSDK = {
         }
 
         try {
-            // Load SDK script dynamically
-            console.log('[YaSDK] Loading SDK...');
-            await this.loadSDKScript();
+            // Check if SDK is loaded from head
+            if (typeof YaGames === 'undefined') {
+                console.error('[YaSDK] SDK script not loaded!');
+                this.initFallbackMode();
+                return false;
+            }
 
             // Initialize SDK
             this.ysdk = await YaGames.init();
@@ -420,11 +406,17 @@ const YandexGamesSDK = {
                 callbacks: {
                     onOpen: () => {
                         SoundManager.setMuted(true);
+                        if (typeof game !== 'undefined' && game.loop) {
+                            game.loop.sleep();
+                        }
                         if (this.callbacks.onAdOpen) this.callbacks.onAdOpen();
                     },
                     onClose: (wasShown) => {
                         this.isAdShowing = false;
                         SoundManager.setMuted(false);
+                        if (typeof game !== 'undefined' && game.loop) {
+                            game.loop.wake();
+                        }
                         if (this.callbacks.onAdClose) this.callbacks.onAdClose();
                         resolve(wasShown);
                     },
@@ -437,6 +429,9 @@ const YandexGamesSDK = {
                     onError: () => {
                         this.isAdShowing = false;
                         SoundManager.setMuted(false);
+                        if (typeof game !== 'undefined' && game.loop) {
+                            game.loop.wake();
+                        }
                         resolve(false);
                     }
                 }
@@ -469,21 +464,34 @@ const YandexGamesSDK = {
                 callbacks: {
                     onOpen: () => {
                         SoundManager.setMuted(true);
+                        if (typeof game !== 'undefined' && game.loop) {
+                            game.loop.sleep();
+                        }
                         if (this.callbacks.onAdOpen) this.callbacks.onAdOpen();
                     },
                     onClose: (wasShown) => {
                         this.isAdShowing = false;
                         SoundManager.setMuted(false);
+                        if (typeof game !== 'undefined' && game.loop) {
+                            game.loop.wake();
+                        }
                         if (this.callbacks.onAdClose) this.callbacks.onAdClose();
                         resolve(wasShown);
                     },
                     onError: () => {
                         this.isAdShowing = false;
                         SoundManager.setMuted(false);
+                        if (typeof game !== 'undefined' && game.loop) {
+                            game.loop.wake();
+                        }
                         resolve(false);
                     },
                     onOffline: () => {
                         this.isAdShowing = false;
+                        SoundManager.setMuted(false);
+                        if (typeof game !== 'undefined' && game.loop) {
+                            game.loop.wake();
+                        }
                         resolve(false);
                     }
                 }
@@ -611,6 +619,13 @@ const YandexGamesSDK = {
 // Initialize SDK on page load
 window.addEventListener('load', () => {
     YandexGamesSDK.init();
+
+    // Prevent context menu
+    window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // Prevent selection and dragging
+    window.addEventListener('selectstart', (e) => e.preventDefault());
+    window.addEventListener('dragstart', (e) => e.preventDefault());
 });
 
 // Expose globally
