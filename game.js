@@ -245,7 +245,7 @@ const YandexGamesSDK = {
     isAuthorized: false,
 
     // Leaderboard name
-    leaderboardName: 'crystal_puzzle_highscore',
+    leaderboardName: 'crystalpuzzlehighscore',
 
     // Callbacks for game state
     callbacks: {
