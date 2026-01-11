@@ -1293,7 +1293,7 @@ const config = {
     height: 700,
     scale: {
         mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH
+        autoCenter: Phaser.Scale.NO_CENTER
     },
     scene: { preload: preload, create: create }
 };
