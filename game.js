@@ -1799,6 +1799,26 @@ function create() {
 
         const textureKey = container.getData('textureKey') || blockTextureKeys[0];
         snapAndPlace(container, placements, textureKey);
+
+        // === HIGH-DOPAMINE: PLACEMENT REWARD ===
+        const placedBlockCount = placements.length;
+        const placementScore = placedBlockCount * 10;
+        score += placementScore;
+        if (domScoreValue) {
+            domScoreValue.textContent = String(score);
+        }
+
+        // Show floating text for placement
+        // Use the shape's previous center position for the text
+        const centerX = container.x;
+        const centerY = container.y;
+        if (typeof GameJuice !== 'undefined') {
+            GameJuice.showFloatingText(`+${placementScore}`, centerX, centerY, 'normal');
+        } else {
+            // Fallback if GameJuice isn't ready
+            console.log(`Placement Score: +${placementScore}`);
+        }
+
         SoundManager.play('place');
         checkAndClearLines();
 
@@ -2066,10 +2086,32 @@ function create() {
 
         animateLineClear(rowsToClear, colsToClear, sprites);
 
-        const cleared = rowsToClear.length + colsToClear.length;
+        const clearedLines = rowsToClear.length + colsToClear.length;
         comboStreak += 1;
-        const multiplier = Math.max(cleared, comboStreak);
-        const earnedPoints = cleared * 10 * multiplier;
+
+        // === HIGH-DOPAMINE: ADVANCED SCORING ===
+        // Base points per line (increased from 10 to 100)
+        const BASE_POINTS = 100;
+
+        // Multi-line multiplier (Exponential reward)
+        let multiLineMultiplier = 1;
+        if (clearedLines === 2) multiLineMultiplier = 1.5;
+        else if (clearedLines === 3) multiLineMultiplier = 2.0;
+        else if (clearedLines >= 4) multiLineMultiplier = 3.0;
+
+        // Streak multiplier (encourages continuous play)
+        const streakMultiplier = 1 + ((comboStreak - 1) * 0.5);
+
+        // Calculate total points
+        let earnedPoints = Math.round((clearedLines * BASE_POINTS * multiLineMultiplier) * streakMultiplier);
+
+        // Jackpot Bonus for 3+ lines
+        let isJackpot = false;
+        if (clearedLines >= 3) {
+            earnedPoints += 500;
+            isJackpot = true;
+        }
+
         score += earnedPoints;
         if (domScoreValue) {
             domScoreValue.textContent = String(score);
@@ -2085,22 +2127,32 @@ function create() {
         // Score pulse animation
         GameJuice.pulseScore();
 
-        // Floating score text at center of cleared area
         const centerX = startX + gridWidth / 2;
         const centerY = startY + gridHeight / 2;
-        const textType = comboStreak >= 4 ? 'excellent' : comboStreak >= 2 ? 'combo' : 'normal';
+
+        let textType = 'normal';
+        if (isJackpot) textType = 'excellent'; // New jackpot style
+        else if (comboStreak >= 2) textType = 'combo';
+
         setTimeout(() => {
             GameJuice.showFloatingText(`+${earnedPoints}`, centerX, centerY - 50, textType);
         }, 150);
 
         // Show combo message with localization
-        if (multiplier >= 2) {
+        // Show if we have a streak OR multiple lines cleared
+        if (comboStreak >= 2 || clearedLines >= 2) {
+            const displayMultiplier = Math.max(comboStreak, clearedLines); // Use the larger number for display
             const comboText = LocalizationManager.t('combo_text', 'COMBO');
             const excellentText = LocalizationManager.t('excellent', 'EXCELLENT!');
-            const label = multiplier >= 4 ? `${excellentText} x${multiplier}` : `${comboText} x${multiplier}`;
+
+            // Show "Excellent" for high combos or 3+ lines
+            const label = (comboStreak >= 4 || clearedLines >= 3)
+                ? `${excellentText} x${displayMultiplier}`
+                : `${comboText} x${displayMultiplier}`;
+
             showComboMessage(label);
         }
-        return cleared;
+        return clearedLines;
     };
 
     const canPlaceBlocksAnywhere = (blocks) => {
