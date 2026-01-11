@@ -1766,7 +1766,13 @@ function create() {
 
         draggedContainer.x = pointer.x;
         draggedContainer.y = pointer.y;
-        draggedContainer.setAlpha(0.7);
+
+        // Check if playable to decide alpha
+        const blocks = draggedContainer.getData('shapeBlocks');
+        const canFit = blocks ? canPlaceBlocksAnywhere(blocks) : true;
+
+        // If it can't fit, keep it grey/transparent. If it fits, standard drag alpha.
+        draggedContainer.setAlpha(canFit ? 0.7 : 0.4);
     });
 
     this.input.on('pointerup', (pointer) => {
@@ -1789,9 +1795,9 @@ function create() {
                 duration: 220,
                 ease: 'Sine.easeInOut',
                 onComplete: () => {
-                    container.setAlpha(1);
                     container.setDepth(depth.dock);
                     container.setScale(previewScale);
+                    updateShapeVisuals(); // Re-apply visual state explicitly
                 }
             });
             return;
@@ -1839,9 +1845,8 @@ function create() {
         const defs = pickShapeSet();
         const positions = layoutShapeSlots(defs);
         defs.forEach((def, index) => createShape(def, positions[index]));
+        updateShapeVisuals(); // Check initially spawned shapes
     };
-
-    spawnAllShapes();
 
     const tryPlaceShape = (container) => {
         if (!container || !container.list) {
@@ -2085,6 +2090,7 @@ function create() {
         });
 
         animateLineClear(rowsToClear, colsToClear, sprites);
+        updateShapeVisuals(); // Update shapes after clearing starts
 
         const clearedLines = rowsToClear.length + colsToClear.length;
         comboStreak += 1;
@@ -2424,8 +2430,9 @@ function create() {
         // Check for line clears after destruction (with delay for visual effect)
         setTimeout(() => {
             const linesCleared = checkAndClearLines();
+            updateShapeVisuals(); // Update visuals after hammer effect
+
             if (linesCleared > 0) {
-                // Bonus message for creating lines with hammer
                 setTimeout(() => {
                     showComboMessage(LocalizationManager.t('hammer_clear', 'HAMMER CLEAR!'));
                 }, 200);
@@ -2434,6 +2441,29 @@ function create() {
         }, destroyedCells.length * 40 + 300);
 
         return totalDestroyed;
+    };
+
+    // ============================================
+    // DYNAMIC SHAPE GREYING (VISUAL HINT)
+    // ============================================
+    const updateShapeVisuals = () => {
+        if (isGameOver) return;
+
+        activeShapes.forEach(container => {
+            if (!container || !container.active) return;
+
+            const blocks = container.getData('shapeBlocks');
+            if (!blocks) return;
+
+            const canFit = canPlaceBlocksAnywhere(blocks);
+
+            // Visual feedback: Grey out if it doesn't fit
+            if (!canFit) {
+                container.setAlpha(0.4);
+            } else {
+                container.setAlpha(1);
+            }
+        });
     };
 
     this.input.on('pointerdown', (pointer) => {
@@ -2476,4 +2506,6 @@ function create() {
         // Consume hammer - deactivate after use
         setDeleteMode(false);
     });
+    // Initial spawn
+    spawnAllShapes();
 }
