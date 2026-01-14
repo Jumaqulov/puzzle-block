@@ -1,52 +1,79 @@
-# Crystal Puzzle
+# 💎 Crystal Puzzle - Project Overview
 
-Futuristik 8x8 kristal-blokli puzzle o'yini. To'liq front-end (HTML/CSS/JS) stackida yozilgan, Phaser 3 grafikasi, Web Audio effektlari, PWA manifesti va Yandex Games SDK (reklama, bulut saqlash, reytinglar) bilan integratsiyalangan.
+## 🎮 Game Description
+**Crystal Puzzle** is a high-polish, "1010!"-style block puzzle game set in a mesmerizing deep space environment. Players drag and drop jewel-like tetromino shapes onto a grid to form complete lines. The game is designed for maximum player engagement ("High Dopamine") through satisfying visual effects, deep soundscapes, and a rewarding scoring system.
 
-## O'yin qanday ishlaydi
-- Har doim 3 ta tasodifiy shakl paydo bo'ladi; har biri tortib olib 8x8 maydonga qo'yiladi. Uchalasini ham ishlatsangiz, yangilari keladi.
-- Shakl qo'yilganda har bir blok uchun +10 ochko, to'liq qator/ustunlar olib tashlansa yuqori ball: baza 100, 2 qator = 1.5x, 3 qator = 2x, 4+ = 3x, streak multiplikatori (1 + 0.5 * streak) va 3+ qator uchun +500 "jackpot".
-- "Hammer" power-up: reklamadan keyin 3x3 hududni tozalaydi (har blok uchun +5 ochko, ekranni titratish va portlash effektlari). "Shuffle": faollashgan shakllarni yangilaydi.
-- Joylash mumkin bo'lmagan shakllar avtomatik xiralashadi; o'yin boshida qisqa qo'l animatsiyasi ko'rsatiladi. Hech bir shakl joylashmasa — o'yin tugaydi va restart/sharing tugmalari chiqadi.
-- Web Share API orqali natijani ulashish, desktopda esa matn avtomatik clipboard'ga nusxalanadi.
+## 🛠️ Technology Stack
+*   **Engine:** [Phaser 3.60.0](https://phaser.io/) (WebGL/Canvas)
+*   **Language:** JavaScript (ES6+)
+*   **Styling:** CSS3 (Variables, Flexbox, Glassmorphism effects)
+*   **Markup:** HTML5 (Semantic, optimized for mobile)
+*   **Monetization & Platform:** Yandex Games SDK (v2)
+*   **Build Tooling:** None (Vanilla JS implementation for ease of editing)
 
-## Asosiy texnologiyalar
-- `index.html`: Yadro markup, PWA manifesti, Google Fonts, Phaser, Yandex Games SDK ulangan.
-- `game.js`: Lokalizatsiya, Yandex SDK fallbeklari, ovoz menejeri, “cosmic starfield” fon animatsiyasi, o'yin sikli, scoring, combo va power-uplar.
-- `styles.css`: Kosmik fon (nebula, chang, vignette), kursor va UI (HUD, modallar, power-up tugmalari, til menyusi) uchun styling. `prefers-reduced-motion` bo'yicha starfield o'chadi.
-- Kutubxonalar: `assets/lib/phaser.min.js`, Phosphor ikon seti (`assets/lib/regular`), WAV tovushlar (`sounds`).
-- PWA: `manifest.json` (maskable `assets/icon.png`, portret rejim, tema ranglari). Screenshots: `assets/Screenshot-*.png`.
+## 🌟 Key Features
 
-## Lokalizatsiya
-- Til aniqlash tartibi: Yandex SDK → `localStorage` (`crystal_puzzle_lang`) → brauzer tili → `uz` defolt.
-- Qo'llab-quvvatlanadigan tillar: `uz`, `ru`, `en`. Tilni UI dagi til tanlagichidan almashtirish mumkin.
-- Tarjima matnlari va yangi tillarni qo'shish: `LocalizationManager.translations` blokida (`game.js`).
+### 1. Core Gameplay
+*   **Grid System:** 10x10 Grid where players place random shapes.
+*   **Mechanics:** Drag & drop controls with "snap-to-grid" logic.
+*   **Line Clearing:** Classic row/column clearing logic.
+*   **Game Over:** Triggers when no shapes can fit on the board; shapes turn grey (`alpha: 0.4`) as a visual hint.
 
-## Yandex Games integratsiyasi
-- Avto-aniqlash: agar Yandex muhitida bo'lmasa, dev/fallback rejimi ishga tushadi (power-uplar reklamasiz darhol faollashadi, audio mute/unmute ishlaydi, lekin reklamalar ko'tarilmaydi).
-- Rewarded ads: `YandexGamesSDK.showRewardAd('hammer'|'shuffle')` tugmalar bosilganda chaqiriladi; muvaffaqiyatli ko'rsatishda tegishli power-up faollashadi.
-- Interstitial: `onGameOver` ichida (Yandex'da) kechiktirib ko'rsatiladi.
-- Reyting/bulut: rekordlar `crystal_puzzle_highscore` leaderboardiga yuboriladi; foydalanuvchi avtorizatsiya qilingan bo'lsa, bulutda saqlanadi. Aks holda `localStorage` (`ancient_treasures_high_score`) ishlatiladi.
+### 2. "High-Dopamine" Scoring System
+*   **Placement Rewards:** Instant points for every block placed.
+*   **Advanced Multipliers:**
+    *   1 Line: Base score
+    *   2 Lines: 1.5x Multiplier
+    *   3 Lines: 2.0x Multiplier
+    *   4+ Lines: 3.0x Multiplier
+*   **Combo Streak:** Consecutive line clears build a "Streak Multiplier" regarding of how many lines are cleared.
+*   **Jackpot:** +500 point bonus for clearing 3 or more lines at once.
 
-## Vizual va audio jihatlar
-- Fonga chuqur kosmik starfield (canvas), uchta nebula qatlamlari, chang va vignette overlay.
-- Drag, joylash, line clear, shuffle va hammer uchun audio effektlar (`sounds/`), ads vaqtida avtomatik mute qilinadi.
-- Hammer uchun shockwave, DOM-partikllar, combo matni va ekran titrashi orqali "game juice".
+### 3. Visual & Audio Experience (The "Juice")
+*   **Theme:** Deep Space Nebula with dynamic breathing animations and floating cosmic dust.
+*   **UI Style:** Glassmorphism (frosted glass) panels, neon glows (`#BC13FE`, `#00D4FF`), and "Exo 2" / "Orbitron" typography.
+*   **VFX:**
+    *   Particle explosions on block clear.
+    *   Screen shake (Light, Medium, Heavy intensities).
+    *   Floating score popups ("+30", "EXCELLENT!").
+    *   Line flash effects.
+*   **Audio:** Synthesized sound effects (Sine/Sawtooth waves) generated via Web Audio API (no external mp3s needed).
 
-## Papka tuzilmasi
-- `index.html` — kirish nuqtasi.
-- `styles.css` — umumiy styling va animatsiyalar.
-- `game.js` — o'yin logikasi, integratsiyalar va effektlar.
-- `assets/` — `icon.png`, ko'rsatkich rasmlar, Phaser va ikon font.
-- `sounds/` — WAV tovushlar.
-- `manifest.json` — PWA sozlamalari.
+### 4. Power-Ups & Monetization
+*   **Tools:**
+    *   🔨 **Hammer:** Clears a 3x3 area of blocks.
+    *   🔀 **Shuffle:** Refreshes the available shapes in the dock.
+*   **Integration:** Tools are unlocked by watching Rewarded Video Ads (Yandex Games SDK).
+*   **UI:** Professional "AD" corner badges on tool buttons.
 
-## Lokal ishga tushirish
-1) Har qanday statik serverdan foydalaning (brauzer xavfsizlik cheklovlarini chetlash uchun lokal fayl sifatida emas):
-   - `npx http-server . -p 8080` yoki `python -m http.server 8080`
-2) Brauzerda `http://localhost:8080/` ni oching.
-- Yandex SDK lokal rejimda fallbek qiladi; power-uplar darhol ishlaydi, reklama ko'rsatilmaydi. Real reklamalar/bulut uchun Yandex Games iframe muhitida sinang.
+### 5. Localization (i18n)
+*   Top-level `LocalizationManager` object.
+*   Supports: **English (en)**, **Russian (ru)**, **Uzbek (uz)**.
+*   Auto-detection via Yandex SDK environment or Browser language.
+*   Persists language preference in `localStorage`.
 
-## Konfiguratsiya uchun eslatmalar
-- Power-up tugmalari, HUD va modal matnlari `LocalizationManager` orqali olinadi; yangi kalit qo'shsangiz, til tanlagichiga ham qo'shing (`index.html`).
-- Reklama va leaderboard nomlari `YandexGamesSDK` blokida (`game.js`) sozlangan; kerak bo'lsa o'zgartiring.
-- Starfield va nebula intensivligini kamaytirmoqchi bo'lsangiz, `Starfield.config` va CSS animatsiyalarini tahrir qiling.
+## 📂 Project Structure
+
+### `game.js` (The Brain)
+Contains the entire game logic within a single Phaser Scene (`create`, `update`).
+*   **Custom Objects:** `LocalizationManager`, `SoundManager` (Web Audio), `GameJuice` (VFX), `YandexGamesSDK`.
+*   **Key Functions:**
+    *   `spawnAllShapes()`: Spawns new shapes in the dock.
+    *   `checkAndClearLines()`: Core grid logic.
+    *   `updateShapeVisuals()`: Checks fit and greys out unplayable shapes.
+    *   `applyHammerEffect()`: Logic for power-up destruction.
+
+### `styles.css` (The Look)
+Handles the non-canvas UI overlay.
+*   **Layout:** Responsive 3-column layout (HUD - Game - Powerups) using Flexbox.
+*   **Responsiveness:** Mobile-first media queries to adjust layout for phones vs tablets/desktops.
+*   **Effects:** CSS Animations (`nebulaBreath`, `dustDrift`, `pulse`, `modalPop`).
+
+### `index.html` (The Skeleton)
+*   Loads fonts (Google Fonts: Orbitron, Exo 2).
+*   Initializes Yandex SDK in `<head>`.
+*   Contains the DOM Overlay UI (Splash screen, HUD, Buttons, Modals).
+
+## 🚀 Deployment
+*   **PWA Ready:** manifest.json included.
+*   **CSP Compliance:** All scripts and styles are local or standard CDNs (Phaser), compliant with Yandex Games CSP policies.
