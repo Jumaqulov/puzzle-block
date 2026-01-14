@@ -14,7 +14,7 @@
 ## 🌟 Key Features
 
 ### 1. Core Gameplay
-*   **Grid System:** 10x10 Grid where players place random shapes.
+*   **Grid System:** 8x8 Grid where players place random shapes.
 *   **Mechanics:** Drag & drop controls with "snap-to-grid" logic.
 *   **Line Clearing:** Classic row/column clearing logic.
 *   **Game Over:** Triggers when no shapes can fit on the board; shapes turn grey (`alpha: 0.4`) as a visual hint.

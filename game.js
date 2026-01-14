@@ -1619,7 +1619,7 @@ function create() {
     };
 
     try {
-        const stored = localStorage.getItem('ancient_treasures_high_score');
+        const stored = localStorage.getItem('crystal_puzzle_high_score');
         highScore = stored ? Number(stored) : 0;
         if (Number.isNaN(highScore)) {
             highScore = 0;
@@ -1912,7 +1912,7 @@ function create() {
             showComboMessage(LocalizationManager.t('new_record', 'NEW RECORD!'));
         }
         try {
-            localStorage.setItem('ancient_treasures_high_score', String(highScore));
+            localStorage.setItem('crystal_puzzle_high_score', String(highScore));
         } catch (err) {
             // localStorage bloklansa ham o'yin ishlayveradi
         }
