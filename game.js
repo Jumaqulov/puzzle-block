@@ -23,7 +23,9 @@ const LocalizationManager = {
             new_record: 'NEW RECORD!',
             combo_text: 'COMBO',
             excellent: 'EXCELLENT!',
-            hammer_clear: 'HAMMER CLEAR!'
+            hammer_clear: 'HAMMER CLEAR!',
+            landscape_warning_title: 'Please rotate your device',
+            landscape_warning_text: 'This game only works in portrait mode'
         },
         ru: {
             game_title: 'КРИСТАЛЛ ПАЗЛ',
@@ -38,7 +40,9 @@ const LocalizationManager = {
             new_record: 'НОВЫЙ РЕКОРД!',
             combo_text: 'КОМБО',
             excellent: 'ОТЛИЧНО!',
-            hammer_clear: 'УДАР МОЛОТОМ!'
+            hammer_clear: 'УДАР МОЛОТОМ!',
+            landscape_warning_title: 'Пожалуйста, поверните устройство',
+            landscape_warning_text: 'Эта игра работает только в вертикальном режиме'
         },
         uz: {
             game_title: 'KRISTAL PAZL',
@@ -53,7 +57,9 @@ const LocalizationManager = {
             new_record: 'YANGI REKORD!',
             combo_text: 'KOMBO',
             excellent: "A'LO!",
-            hammer_clear: "BOLG'A ZARBI!"
+            hammer_clear: "BOLG'A ZARBI!",
+            landscape_warning_title: "Iltimos, telefoningizni aylantiring",
+            landscape_warning_text: "Bu o'yin faqat vertikal holatda ishlaydi"
         }
     },
 
@@ -223,12 +229,10 @@ const LocalizationManager = {
     }
 };
 
-// Initialize localization on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-    LocalizationManager.init();
-});
+// DON'T initialize localization immediately - wait for SDK
+// LocalizationManager will be initialized after SDK is ready
 
-// Also expose globally for Yandex Games SDK integration
+// Expose globally for Yandex Games SDK integration
 window.LocalizationManager = LocalizationManager;
 
 // ============================================
@@ -300,14 +304,7 @@ const YandexGamesSDK = {
 
             console.log('[YaSDK] SDK initialized successfully');
 
-            // Get player language
-            try {
-                const lang = this.ysdk.environment?.i18n?.lang;
-                if (lang && LocalizationManager.supportedLanguages.includes(lang)) {
-                    LocalizationManager.setLanguage(lang);
-                    console.log(`[YaSDK] Language set to: ${lang}`);
-                }
-            } catch (e) { }
+            // Language will be set by LocalizationManager.init() after SDK is ready
 
             // Initialize player
             await this.initPlayer();
@@ -315,11 +312,7 @@ const YandexGamesSDK = {
             // Load saved data
             await this.loadGameData();
 
-            // Signal game ready
-            try {
-                this.ysdk.features?.LoadingAPI?.ready();
-            } catch (e) { }
-
+            // DON'T signal game ready here - will be done after Phaser game is created
             this.isInitialized = true;
 
             window.dispatchEvent(new CustomEvent('yandexSDKReady', {
@@ -589,10 +582,8 @@ const YandexGamesSDK = {
         await this.saveHighScore(highScore);
         await this.submitScore(highScore);
 
-        // Show interstitial ad after delay
-        if (this.ysdk) {
-            setTimeout(() => this.showInterstitialAd(), 500);
-        }
+        // DON'T show interstitial ad automatically - will be shown on restart button click
+        // This complies with requirement 4.4 - ads must be shown during logical pauses with user action
     },
 
     // ==========================================
@@ -615,18 +606,6 @@ const YandexGamesSDK = {
         return this.ysdk && !this.isAdShowing;
     }
 };
-
-// Initialize SDK on page load
-window.addEventListener('load', () => {
-    YandexGamesSDK.init();
-
-    // Prevent context menu
-    window.addEventListener('contextmenu', (e) => e.preventDefault());
-
-    // Prevent selection and dragging
-    window.addEventListener('selectstart', (e) => e.preventDefault());
-    window.addEventListener('dragstart', (e) => e.preventDefault());
-});
 
 // Expose globally
 window.YandexGamesSDK = YandexGamesSDK;
@@ -1293,12 +1272,58 @@ const config = {
     height: 700,
     scale: {
         mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.NO_CENTER
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        parent: 'game-container',
+        width: 450,
+        height: 700,
+        min: {
+            width: 320,
+            height: 480
+        },
+        max: {
+            width: 540,
+            height: 960
+        }
     },
     scene: { preload: preload, create: create }
 };
 
-const game = new Phaser.Game(config);
+// ============================================
+// PROPER INITIALIZATION SEQUENCE
+// ============================================
+async function initializeApp() {
+    console.log('[Init] Starting app initialization...');
+
+    // Prevent context menu
+    window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // Prevent selection and dragging
+    window.addEventListener('selectstart', (e) => e.preventDefault());
+    window.addEventListener('dragstart', (e) => e.preventDefault());
+
+    // Step 1: Initialize Yandex SDK FIRST
+    await YandexGamesSDK.init();
+    console.log('[Init] Yandex SDK initialized');
+
+    // Step 2: Initialize Localization AFTER SDK (to get correct language)
+    LocalizationManager.init();
+    console.log('[Init] Localization initialized');
+
+    // Step 3: Start Phaser game
+    const game = new Phaser.Game(config);
+    console.log('[Init] Phaser game started');
+}
+
+// Start the initialization sequence when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    // DOM already loaded
+    initializeApp();
+}
+
+// Keep game variable global for other parts to access
+let game = null;
 
 function preload() {
     const drawRoundedRect = (ctx, x, y, width, height, radius) => {
@@ -1619,7 +1644,7 @@ function create() {
     };
 
     try {
-        const stored = localStorage.getItem('crystal_puzzle_high_score');
+        const stored = localStorage.getItem('ancient_treasures_high_score');
         highScore = stored ? Number(stored) : 0;
         if (Number.isNaN(highScore)) {
             highScore = 0;
@@ -1912,7 +1937,7 @@ function create() {
             showComboMessage(LocalizationManager.t('new_record', 'NEW RECORD!'));
         }
         try {
-            localStorage.setItem('crystal_puzzle_high_score', String(highScore));
+            localStorage.setItem('ancient_treasures_high_score', String(highScore));
         } catch (err) {
             // localStorage bloklansa ham o'yin ishlayveradi
         }
@@ -2284,8 +2309,15 @@ function create() {
     });
 
     if (domRestart) {
-        domRestart.onclick = () => {
+        domRestart.onclick = async () => {
             hideDomGameOver();
+
+            // Show interstitial ad before restart (user-initiated action)
+            // This complies with requirement 4.4 - logical pause with user action
+            if (YandexGamesSDK.ysdk) {
+                await YandexGamesSDK.showInterstitialAd();
+            }
+
             this.scene.restart();
         };
     }
@@ -2508,4 +2540,15 @@ function create() {
     });
     // Initial spawn
     spawnAllShapes();
+
+    // Signal Yandex Games that the game is ready to play
+    // This MUST be called after the game is fully initialized and playable
+    if (YandexGamesSDK.ysdk) {
+        try {
+            YandexGamesSDK.ysdk.features?.LoadingAPI?.ready();
+            console.log('[YaSDK] Game ready signal sent');
+        } catch (e) {
+            console.warn('[YaSDK] GameReady API failed:', e);
+        }
+    }
 }
