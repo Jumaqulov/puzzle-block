@@ -778,78 +778,6 @@ html[lang="ru"] .btn {
 }
 
 /* === LANDSCAPE ORIENTATION SUPPORT === */
-@media (orientation: landscape) and (max-height: 600px) {
-    body {
-        padding: 12px;
-        align-items: center;
-    }
-
-    .game-shell {
-        flex-direction: row;
-        gap: 16px;
-        max-width: 100%;
-    }
-
-    .side-hud {
-        flex: 0 0 100px;
-        padding-top: 0;
-    }
-
-    .side-hud__group {
-        margin-bottom: 16px;
-    }
-
-    .side-hud__label {
-        font-size: 12px;
-    }
-
-    .side-hud__value {
-        font-size: 24px;
-    }
-
-    #game-container {
-        max-width: 400px;
-        max-height: calc(100vh - 24px);
-    }
-
-    #game-container canvas {
-        max-height: calc(100vh - 24px) !important;
-    }
-
-    .powerups {
-        flex: 0 0 100px;
-        padding-top: 0;
-        gap: 12px;
-    }
-
-    .powerup {
-        width: 70px;
-        height: 70px;
-    }
-
-    .powerup__icon i {
-        font-size: 22px;
-    }
-
-    .powerup__label {
-        font-size: 10px;
-    }
-
-    .modal-card {
-        width: min(360px, 70vw);
-        padding: 24px;
-    }
-
-    .modal-title {
-        font-size: 28px;
-    }
-
-    .language-selector {
-        top: 12px;
-        right: 12px;
-    }
-}
-
 /* ============================================
    GAME JUICE EFFECTS - AAA Quality
    ============================================ */
@@ -1499,61 +1427,6 @@ body.delete-mode .hammer-cursor {
 }
 
 /* Landscape orientation warning and fixes */
-@media (orientation: landscape) and (max-height: 500px) {
-    body {
-        padding: 8px;
-    }
-
-    .game-shell {
-        flex-direction: row;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-    }
-
-    .side-hud {
-        position: static;
-        flex-direction: column;
-        min-width: 90px;
-    }
-
-    .powerups {
-        position: static;
-        flex-direction: column;
-        gap: 6px;
-        padding: 6px;
-    }
-
-    .powerup {
-        padding: 6px 10px;
-        font-size: 11px;
-        min-width: 80px;
-    }
-
-    .powerup__icon {
-        font-size: 16px;
-    }
-
-    .powerup__label {
-        display: none;
-    }
-
-    .ad-badge {
-        font-size: 8px;
-        padding: 2px 4px;
-    }
-
-    #game-container {
-        max-height: calc(100vh - 16px);
-    }
-
-    .language-selector {
-        top: 6px;
-        right: 6px;
-        scale: 0.85;
-    }
-}
-
 /* ============================================
    SPLASH LOADING TEXT
    ============================================ */
@@ -1639,7 +1512,7 @@ body.delete-mode .hammer-cursor {
 }
 
 /* Show warning in landscape mode on mobile/tablet */
-@media (max-width: 768px) and (orientation: landscape) {
+@media (max-width: 1023px) and (orientation: landscape) {
     .landscape-warning {
         display: flex !important;
     }
@@ -1649,6 +1522,14 @@ body.delete-mode .hammer-cursor {
     .language-selector,
     .modal {
         display: none !important;
+    }
+
+    /* Also hide background elements for cleaner look */
+    #starfield-canvas,
+    .nebula-layer,
+    .cosmic-dust,
+    .vignette {
+        opacity: 0.3;
     }
 }
 
@@ -1815,8 +1696,8 @@ body.delete-mode .hammer-cursor {
    PREVENT DEFORMATION IN LANDSCAPE
    ============================================ */
 
-/* For tablets and larger devices, allow landscape but constrain properly */
-@media (min-width: 769px) and (orientation: landscape) {
+/* For desktop and larger devices, allow landscape */
+@media (min-width: 1024px) and (orientation: landscape) {
     body {
         align-items: center;
         padding: 20px;
