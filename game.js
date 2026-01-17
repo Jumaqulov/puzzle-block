@@ -25,7 +25,15 @@ const LocalizationManager = {
             excellent: 'EXCELLENT!',
             hammer_clear: 'HAMMER CLEAR!',
             landscape_warning_title: 'Please rotate your device',
-            landscape_warning_text: 'This game only works in portrait mode'
+            landscape_warning_text: 'This game only works in portrait mode',
+            copied_to_clipboard: 'Copied to clipboard!',
+            copy_failed: 'Failed to copy',
+            share_not_supported: 'Sharing is not supported',
+            share_message: 'I scored {score} points in Crystal Puzzle! Try it yourself!',
+            share_title: 'Crystal Puzzle - Block Puzzle Game',
+            share_modal_title: 'Share!',
+            copy_link: 'Copy Link',
+            instagram_note: 'Instagram sharing: Paste the copied link in your Instagram bio or story!'
         },
         ru: {
             game_title: 'КРИСТАЛЛ ПАЗЛ',
@@ -42,7 +50,15 @@ const LocalizationManager = {
             excellent: 'ОТЛИЧНО!',
             hammer_clear: 'УДАР МОЛОТОМ!',
             landscape_warning_title: 'Пожалуйста, поверните устройство',
-            landscape_warning_text: 'Эта игра работает только в вертикальном режиме'
+            landscape_warning_text: 'Эта игра работает только в вертикальном режиме',
+            copied_to_clipboard: 'Скопировано!',
+            copy_failed: 'Не удалось скопировать',
+            share_not_supported: 'Функция не поддерживается',
+            share_message: 'Я набрал {score} очков в Crystal Puzzle! Попробуй и ты!',
+            share_title: 'Crystal Puzzle - Блок головоломка',
+            share_modal_title: 'Поделиться!',
+            copy_link: 'Скопировать ссылку',
+            instagram_note: 'Делитесь через Instagram: Вставьте скопированную ссылку в био или историю Instagram!'
         },
         uz: {
             game_title: 'KRISTAL PAZL',
@@ -59,7 +75,15 @@ const LocalizationManager = {
             excellent: "A'LO!",
             hammer_clear: "BOLG'A ZARBI!",
             landscape_warning_title: "Iltimos, telefoningizni aylantiring",
-            landscape_warning_text: "Bu o'yin faqat vertikal holatda ishlaydi"
+            landscape_warning_text: "Bu o'yin faqat vertikal holatda ishlaydi",
+            copied_to_clipboard: 'Nusxalandi!',
+            copy_failed: 'Nusxalash amalga oshmadi',
+            share_not_supported: "Ulashish qo'llab-quvvatlanmaydi",
+            share_message: "Men Crystal Puzzle o'yinida {score} ochko to'pladim! Sen ham o'ynab ko'r!",
+            share_title: 'Crystal Puzzle - Blok Boshqotirma',
+            share_modal_title: 'Ulashing!',
+            copy_link: 'Linkni nusxalash',
+            instagram_note: "Instagram orqali ulashing: Nusxalangan linkni Instagram bio yoki story'ga joylashtiring!"
         }
     },
 
@@ -147,6 +171,11 @@ const LocalizationManager = {
         // Fallback to English, then to fallback parameter
         const enTranslations = this.translations['en'];
         return (enTranslations && enTranslations[key]) || fallback || key;
+    },
+
+    // Alias for t() method for compatibility
+    get(key, fallback = "") {
+        return this.t(key, fallback);
     },
 
     // Update all DOM elements with data-i18n attribute
@@ -1309,6 +1338,9 @@ async function initializeApp() {
     LocalizationManager.init();
     console.log('[Init] Localization initialized');
 
+    // Export to window for global access (needed for share button and other DOM handlers)
+    window.LocalizationManager = LocalizationManager;
+
     // Step 3: Start Phaser game
     const game = new Phaser.Game(config);
     console.log('[Init] Phaser game started');
@@ -1611,37 +1643,145 @@ function create() {
     };
 
     const shareScore = () => {
-        const text = `Crystal Puzzle o'yinida mening natijam: ${score} ochko! Senda qancha?`;
-        const shareData = {
-            title: 'Crystal Puzzle',
-            text: text,
-            url: window.location.href
+        // Get game URL and message
+        const gameUrl = window.location.origin + window.location.pathname;
+        const messageTemplate = LocalizationManager.get('share_message') || "I scored {score} points in Crystal Puzzle! Try it yourself!";
+        const text = `🎮 ${messageTemplate.replace('{score}', score)} 🏆`;
+
+        // Show share modal
+        openShareModal(score, text, gameUrl);
+    };
+
+    const openShareModal = (userScore, message, gameUrl) => {
+        const modal = document.getElementById('share-modal');
+        const scoreElement = document.getElementById('share-modal-score');
+        const messageElement = document.getElementById('share-modal-message');
+        const closeBtn = document.getElementById('share-modal-close');
+        const overlay = modal.querySelector('.share-modal__overlay');
+
+        if (!modal) return;
+
+        // Update content
+        if (scoreElement) {
+            const scoreLabel = LocalizationManager.get('score_label') || 'ochko';
+            scoreElement.textContent = `${userScore} ${scoreLabel}`;
+        }
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
+
+        // Show modal
+        modal.classList.add('is-visible');
+        document.body.style.overflow = 'hidden';
+
+        // Close handlers
+        const closeModal = () => {
+            modal.classList.remove('is-visible');
+            document.body.style.overflow = '';
         };
 
-        // Web Share API ni sinab ko'ramiz
-        if (navigator.share) {
-            navigator.share(shareData)
-                .then(() => console.log('Ulashish muvaffaqiyatli'))
-                .catch((err) => {
-                    console.log('Ulashish bekor qilindi yoki xato:', err);
-                    // Agar xato bo'lsa (masalan, desktopda bekor qilinsa), clipboardga nusxalaymiz
-                    copyToClipboard(text);
-                });
-        } else {
-            // Agar brauzer share ni qo'llab-quvvatlamasa, clipboardga nusxalaymiz
-            copyToClipboard(text);
+        if (closeBtn) {
+            closeBtn.onclick = closeModal;
+        }
+        if (overlay) {
+            overlay.onclick = closeModal;
+        }
+
+        // Social share buttons
+        const shareButtons = modal.querySelectorAll('[data-share]');
+        shareButtons.forEach(btn => {
+            btn.onclick = () => {
+                const platform = btn.getAttribute('data-share');
+                handleSocialShare(platform, message, gameUrl);
+            };
+        });
+    };
+
+    const handleSocialShare = (platform, message, url) => {
+        const encodedMessage = encodeURIComponent(message);
+        const encodedUrl = encodeURIComponent(url);
+        let shareUrl = '';
+
+        switch (platform) {
+            case 'telegram':
+                shareUrl = `https://t.me/share/url?url=${encodedUrl}&text=${encodedMessage}`;
+                break;
+            case 'whatsapp':
+                shareUrl = `https://wa.me/?text=${encodedMessage}%20${encodedUrl}`;
+                break;
+            case 'email':
+                shareUrl = `mailto:?subject=${encodeURIComponent('Crystal Puzzle')}&body=${encodedMessage}%20${encodedUrl}`;
+                break;
+            case 'facebook':
+                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedMessage}`;
+                break;
+            case 'x':
+                shareUrl = `https://twitter.com/intent/tweet?text=${encodedMessage}&url=${encodedUrl}`;
+                break;
+            case 'instagram':
+                // Instagram doesn't support direct web sharing, copy to clipboard instead
+                copyToClipboard(message, url);
+                showNotification(LocalizationManager.get('instagram_note') || 'Instagram orqali ulashing: Nusxalangan linkni Instagram bio/story\'ga joylashtiring!');
+                return;
+            case 'copy':
+                copyToClipboard(message, url);
+                return;
+        }
+
+        if (shareUrl) {
+            window.open(shareUrl, '_blank', 'width=600,height=400');
         }
     };
 
-    const copyToClipboard = (text) => {
+    const copyToClipboard = (text, url) => {
+        const fullMessage = `${text}\n\n🔗 ${url}`;
+
         if (navigator.clipboard) {
-            navigator.clipboard.writeText(text).then(() => {
+            navigator.clipboard.writeText(fullMessage).then(() => {
+                // Show success notification
                 if (typeof GameJuice !== 'undefined') {
                     GameJuice.showFloatingText("Nusxalandi!", window.innerWidth / 2, window.innerHeight * 0.7, 'combo');
                 }
-            }).catch(() => { });
+
+                // Also show modal notification
+                showNotification(LocalizationManager.get('copied_to_clipboard') || 'Nusxalandi!');
+            }).catch((err) => {
+                console.error('Clipboard xatosi:', err);
+                showNotification(LocalizationManager.get('copy_failed') || 'Nusxalash amalga oshmadi');
+            });
+        } else {
+            // Fallback for older browsers
+            showNotification(LocalizationManager.get('share_not_supported') || 'Ulashish qo\'llab-quvvatlanmaydi');
         }
     };
+
+    const showNotification = (message) => {
+        // Create temporary notification
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(188, 19, 254, 0.95);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            z-index: 10000;
+            box-shadow: 0 0 30px rgba(188, 19, 254, 0.6);
+            animation: fadeInOut 2s ease-in-out;
+        `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        // Remove after animation
+        setTimeout(() => {
+            notification.remove();
+        }, 2000);
+    };
+
 
     try {
         const stored = localStorage.getItem('ancient_treasures_high_score');
