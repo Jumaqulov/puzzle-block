@@ -1926,18 +1926,28 @@ function create() {
         draggedContainer.y = pointer.y;
     });
 
+
     this.input.on('pointermove', (pointer) => {
         if (!draggedContainer) return;
 
         draggedContainer.x = pointer.x;
         draggedContainer.y = pointer.y;
 
-        // Check if playable to decide alpha
+        // Check if playable to decide visual feedback
         const blocks = draggedContainer.getData('shapeBlocks');
         const canFit = blocks ? canPlaceBlocksAnywhere(blocks) : true;
 
-        // If it can't fit, keep it grey/transparent. If it fits, standard drag alpha.
-        draggedContainer.setAlpha(canFit ? 0.7 : 0.4);
+        // ENHANCED VISUAL FEEDBACK for Yandex platform
+        // Use both alpha and tint for better visibility
+        if (canFit) {
+            // Valid placement: more opaque, no tint
+            draggedContainer.setAlpha(0.8);  // Increased from 0.7
+            draggedContainer.clearTint();
+        } else {
+            // Invalid placement: more transparent + red tint
+            draggedContainer.setAlpha(0.5);  // Increased from 0.4 for better visibility
+            draggedContainer.setTint(0xff4444);  // Red tint to clearly indicate invalid
+        }
     });
 
     this.input.on('pointerup', (pointer) => {
@@ -2456,11 +2466,25 @@ function create() {
             // This complies with requirement 4.4 - logical pause with user action
             if (YandexGamesSDK.ysdk) {
                 await YandexGamesSDK.showInterstitialAd();
+
+                // CRITICAL FIX: Wait for game loop to stabilize after ad
+                // Ad causes game.loop.sleep() then wake(), which can leave stale state
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
+
+            // CRITICAL FIX: Reset game state before restart
+            // This prevents restarting from game over position on Yandex platform
+            isGameOver = false;
+            score = 0;
+            draggedContainer = null;
+
+            // Force clear all tweens to prevent animation conflicts
+            this.tweens.killAll();
 
             this.scene.restart();
         };
     }
+
 
     if (domShare) {
         domShare.onclick = () => {
