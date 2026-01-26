@@ -1472,10 +1472,76 @@ body.delete-mode .hammer-cursor {
 }
 
 .landscape-warning__icon {
-    font-size: 80px;
-    margin-bottom: 24px;
-    color: var(--glow);
-    filter: drop-shadow(0 0 20px rgba(188, 19, 254, 0.6));
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Ikonka o'lchami */
+    width: 80px;
+    height: 80px;
+}
+
+/* SVG ning umumiy stili va animatsiyasi */
+.svg-rotate-phone {
+    width: 100%;
+    height: auto;
+    /* Asosiy neon rang (Cyan) */
+    stroke: var(--cyan);
+    /* Yorishish effekti */
+    filter: drop-shadow(0 0 8px var(--cyan));
+    /* ANIMATSIYA: 90 gradus aylanish */
+    animation: professionalRotate 2.5s infinite ease-in-out;
+    transform-origin: center;
+    /* Markazdan aylanish */
+}
+
+/* Telefon elementlarining ichki ranglari (ixtiyoriy o'zgartirish mumkin) */
+.phone-body,
+.phone-top,
+.phone-home {
+    vector-effect: non-scaling-stroke;
+    /* Chiziq qalinligi o'zgarmasligi uchun */
+}
+
+/* Home tugmasini sal boshqacharoq rang qilish (masalan, binafsha) */
+.phone-home {
+    stroke: var(--glow);
+    fill: rgba(157, 0, 255, 0.2);
+}
+
+
+/* --- YANGI ANIMATSIYA --- */
+/* Yonboshdan (Landscape) -> Tikkaga (Portrait) aniq o'tish */
+@keyframes professionalRotate {
+    0% {
+        transform: rotate(-90deg);
+        /* Boshlanishi: YONBOSH holat */
+        opacity: 0;
+        /* Ko'rinmasdan boshlanadi */
+    }
+
+    20% {
+        transform: rotate(-90deg);
+        /* Yonbosh holatda paydo bo'ladi */
+        opacity: 1;
+    }
+
+    50% {
+        transform: rotate(0deg);
+        /* TIKKA holatga keladi */
+    }
+
+    80% {
+        transform: rotate(0deg);
+        /* Tikka holatda biroz turadi */
+        opacity: 1;
+    }
+
+    100% {
+        transform: rotate(0deg);
+        opacity: 0;
+        /* Sekin yo'qoladi */
+    }
 }
 
 .landscape-warning__icon i {
