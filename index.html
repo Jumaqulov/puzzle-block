@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="styles.css">
     <script src="assets/lib/phaser.min.js"></script>
     <!-- Yandex Games SDK -->
-    <script src="https://yandex.ru/games/sdk/v2"></script>
+    <!-- Yandex Games SDK loaded dynamically -->
 </head>
 
 <body>
@@ -72,18 +72,8 @@
                     <span>Email</span>
                 </button>
 
-                <button class="share-btn share-btn--facebook" data-share="facebook">
-                    <i class="ph ph-facebook-logo"></i>
-                    <span>Facebook</span>
-                </button>
-
                 <button class="share-btn share-btn--x" data-share="x">
                     <i class="ph ph-x-logo"></i>
-                </button>
-
-                <button class="share-btn share-btn--instagram" data-share="instagram">
-                    <i class="ph ph-instagram-logo"></i>
-                    <span>Instagram</span>
                 </button>
 
                 <button class="share-btn share-btn--copy" data-share="copy">
@@ -185,7 +175,7 @@
         </div>
     </div>
 
-    <script src="game.js"></script>
+    <script type="module" src="/src/main.ts"></script>
 </body>
 
 </html>
