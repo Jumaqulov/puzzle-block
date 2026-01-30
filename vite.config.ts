@@ -7,6 +7,7 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     minify: 'terser',
+    chunkSizeWarningLimit: 1600, // Suppress Phaser size warning
     terserOptions: {
       compress: {
         drop_console: true, // Remove console logs for prod

@@ -6,6 +6,7 @@ import { YandexManager } from './managers/YandexManager';
 import { Starfield } from './visuals/Starfield';
 
 // Import CSS
+import '@phosphor-icons/web/regular'; // Loads regular weight icons
 import '../styles.css';
 
 const config: Phaser.Types.Core.GameConfig = {

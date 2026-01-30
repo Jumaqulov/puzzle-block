@@ -12,7 +12,7 @@ export class GameScene extends Phaser.Scene {
     private isGameOver: boolean = false;
     private deleteMode: boolean = false;
     private comboStreak: number = 0;
-    private recordCelebrated: boolean = false;
+
 
     // DOM Elements references
     private domScoreValue: HTMLElement | null = null;
@@ -688,13 +688,16 @@ export class GameScene extends Phaser.Scene {
             this.highScore = this.score;
             this.updateHighScoreUI();
 
-            if (!this.recordCelebrated && this.domHighLabel) {
-                this.recordCelebrated = true;
+            if (this.domHighLabel) {
                 this.domHighLabel.classList.add('record-glow');
-                GameJuice.showFloatingText(LocalizationManager.getInstance().t('new_record'), GAME_CONFIG.width / 2, 100, 'excellent');
             }
+            // Show in center of board
+            const centerX = this.startX + (this.gridSize * CELL_SIZE) / 2;
+            const centerY = this.startY + (this.gridSize * CELL_SIZE) / 2;
+            GameJuice.showFloatingText(LocalizationManager.getInstance().t('new_record'), centerX, centerY, 'excellent');
         }
     }
+
 
     private updateHighScoreUI() {
         if (this.domHighValue) this.domHighValue.textContent = String(this.highScore);
@@ -722,7 +725,6 @@ export class GameScene extends Phaser.Scene {
         this.score = 0;
         this.isGameOver = false;
         this.comboStreak = 0;
-        this.recordCelebrated = false;
         this.updateScoreUI();
         if (this.domHighLabel) this.domHighLabel.classList.remove('record-glow');
 
