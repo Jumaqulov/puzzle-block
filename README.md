@@ -1,79 +1,66 @@
-# 💎 Crystal Puzzle - Project Overview
+# 💎 Crystal Puzzle
 
-## 🎮 Game Description
-**Crystal Puzzle** is a high-polish, "1010!"-style block puzzle game set in a mesmerizing deep space environment. Players drag and drop jewel-like tetromino shapes onto a grid to form complete lines. The game is designed for maximum player engagement ("High Dopamine") through satisfying visual effects, deep soundscapes, and a rewarding scoring system.
+**Crystal Puzzle** — bu zamonaviy "1010!" uslubidagi blok-topishmoq o'yini bo'lib, chuqur kosmos (Deep Space) mavzusida yaratilgan. O'yin yuqori sifatli vizual effektlar, "High Dopamine" ball tizimi va Yandex Games platformasi uchun to'liq optimallashtirilgan arxitekturaga ega.
 
-## 🛠️ Technology Stack
-*   **Engine:** [Phaser 3.60.0](https://phaser.io/) (WebGL/Canvas)
-*   **Language:** JavaScript (ES6+)
-*   **Styling:** CSS3 (Variables, Flexbox, Glassmorphism effects)
-*   **Markup:** HTML5 (Semantic, optimized for mobile)
-*   **Monetization & Platform:** Yandex Games SDK (v2)
-*   **Build Tooling:** None (Vanilla JS implementation for ease of editing)
+## 🚀 Texnologiyalar
 
-## 🌟 Key Features
+Loyiha eng so'nggi zamonaviy texnologiyalar asosida qayta qurildi:
 
-### 1. Core Gameplay
-*   **Grid System:** 8x8 Grid where players place random shapes.
-*   **Mechanics:** Drag & drop controls with "snap-to-grid" logic.
-*   **Line Clearing:** Classic row/column clearing logic.
-*   **Game Over:** Triggers when no shapes can fit on the board; shapes turn grey (`alpha: 0.4`) as a visual hint.
+*   **Engine:** [Phaser 3.80.0](https://phaser.io/)
+*   **Language:** TypeScript (Strict Mode)
+*   **Build Tool:** [Vite](https://vitejs.dev/)
+*   **UI Icons:** `@phosphor-icons/web` (NPM paket)
+*   **Styling:** Modern CSS3 (Glassmorphism, CSS Variables, Animations)
+*   **Platform:** Yandex Games SDK (v2) integratsiyasi
 
-### 2. "High-Dopamine" Scoring System
-*   **Placement Rewards:** Instant points for every block placed.
-*   **Advanced Multipliers:**
-    *   1 Line: Base score
-    *   2 Lines: 1.5x Multiplier
-    *   3 Lines: 2.0x Multiplier
-    *   4+ Lines: 3.0x Multiplier
-*   **Combo Streak:** Consecutive line clears build a "Streak Multiplier" regarding of how many lines are cleared.
-*   **Jackpot:** +500 point bonus for clearing 3 or more lines at once.
+## 🌟 Asosiy Xususiyatlar
 
-### 3. Visual & Audio Experience (The "Juice")
-*   **Theme:** Deep Space Nebula with dynamic breathing animations and floating cosmic dust.
-*   **UI Style:** Glassmorphism (frosted glass) panels, neon glows (`#BC13FE`, `#00D4FF`), and "Exo 2" / "Orbitron" typography.
-*   **VFX:**
-    *   Particle explosions on block clear.
-    *   Screen shake (Light, Medium, Heavy intensities).
-    *   Floating score popups ("+30", "EXCELLENT!").
-    *   Line flash effects.
-*   **Audio:** Synthesized sound effects (Sine/Sawtooth waves) generated via Web Audio API (no external mp3s needed).
+### 1. "High-Dopamine" Ball Tizimi
+*   **Line Clear Multipliers:** Bir vaqtning o'zida bir nechta qatorni o'chirish uchun oshirilgan ballar (1.5x, 2.0x, 3.0x).
+*   **Combo Streak:** Ketma-ket qator o'chirishlar uchun qo'shimcha koeffitsiyentlar.
+*   **Jackpot Bonus:** 3 va undan ortiq qatorni bir vaqtda o'chirganda +500 ball.
 
-### 4. Power-Ups & Monetization
-*   **Tools:**
-    *   🔨 **Hammer:** Clears a 3x3 area of blocks.
-    *   🔀 **Shuffle:** Refreshes the available shapes in the dock.
-*   **Integration:** Tools are unlocked by watching Rewarded Video Ads (Yandex Games SDK).
-*   **UI:** Professional "AD" corner badges on tool buttons.
+### 2. Vizual va Effektlar (The "Juice")
+*   **Kosmik Muhit:** Dinamik "Starfield" foni va nebula effektlari.
+*   **Vizual Feedback:** Bloklar o'chirilganda zarrachalar (particles) portlashi, ekranning silkinishi (Screen Shake) va uchuvchi matnlar.
+*   **Smart Greying:** Dock'dagi shakllarni joylashtirish imkoni bo'lmaganda ular avtomatik ravishda kulrang rangga kiradi.
 
-### 5. Localization (i18n)
-*   Top-level `LocalizationManager` object.
-*   Supports: **English (en)**, **Russian (ru)**, **Uzbek (uz)**.
-*   Auto-detection via Yandex SDK environment or Browser language.
-*   Persists language preference in `localStorage`.
+### 3. Power-Ups (Yordamchi Asboblar)
+*   🔨 **Bolg'a (Hammer):** 3x3 sohadagi bloklarni tozalaydi.
+*   🔀 **Aralashtirish (Shuffle):** Dock'dagi shakllarni yangisiga almashtiradi.
+*   *Eslatma: Bu asboblar Yandex Reklama (Rewarded Ads) orqali ochiladi.*
 
-## 📂 Project Structure
+### 4. Lokalizatsiya (i18n)
+*   O'yin 3 xil tilda ishlaydi: **O'zbek (uz)**, **Rus (ru)**, **Ingliz (en)**.
+*   Til avtomatik ravishda Yandex SDK yoki brauzer tiliga qarab aniqlanadi.
 
-### `game.js` (The Brain)
-Contains the entire game logic within a single Phaser Scene (`create`, `update`).
-*   **Custom Objects:** `LocalizationManager`, `SoundManager` (Web Audio), `GameJuice` (VFX), `YandexGamesSDK`.
-*   **Key Functions:**
-    *   `spawnAllShapes()`: Spawns new shapes in the dock.
-    *   `checkAndClearLines()`: Core grid logic.
-    *   `updateShapeVisuals()`: Checks fit and greys out unplayable shapes.
-    *   `applyHammerEffect()`: Logic for power-up destruction.
+## 📂 Loyiha Strukturasi
 
-### `styles.css` (The Look)
-Handles the non-canvas UI overlay.
-*   **Layout:** Responsive 3-column layout (HUD - Game - Powerups) using Flexbox.
-*   **Responsiveness:** Mobile-first media queries to adjust layout for phones vs tablets/desktops.
-*   **Effects:** CSS Animations (`nebulaBreath`, `dustDrift`, `pulse`, `modalPop`).
+*   `src/` — Barcha TypeScript manba kodlari.
+    *   `scenes/` — Phaser sahnalari (Boot, Game).
+    *   `managers/` — Sound, Localization va Yandex integratorlari.
+    *   `visuals/` — Starfield va boshqa vizual tizimlar.
+*   `public/` — Statik aktivlar (rasmlar, tovushlar, manifest).
+*   `dist/` — Deployment uchun tayyor build fayllari.
+*   `styles.css` — UI va animatsiyalar uchun asosiy CSS.
 
-### `index.html` (The Skeleton)
-*   Loads fonts (Google Fonts: Orbitron, Exo 2).
-*   Initializes Yandex SDK in `<head>`.
-*   Contains the DOM Overlay UI (Splash screen, HUD, Buttons, Modals).
+## 🛠 O'rnatish va Ishga tushirish
 
-## 🚀 Deployment
-*   **PWA Ready:** manifest.json included.
-*   **CSP Compliance:** All scripts and styles are local or standard CDNs (Phaser), compliant with Yandex Games CSP policies.
+1.  Bog'liqliklarni o'rnating:
+    ```bash
+    npm install
+    ```
+
+2.  Development rejimida ishga tushirish:
+    ```bash
+    npm run dev
+    ```
+
+3.  Production uchun build tayyorlash:
+    ```bash
+    npm run build
+    ```
+
+## 📜 Litsenziya
+
+Faqat shaxsiy portfolio va Yandex Games platformasi uchun mo'ljallangan.
