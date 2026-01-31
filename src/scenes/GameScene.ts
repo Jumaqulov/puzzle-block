@@ -214,11 +214,8 @@ export class GameScene extends Phaser.Scene {
                 ease: 'Back.easeOut'
             });
 
-            this.draggedContainer.list.forEach(child => {
-                if (child instanceof Phaser.GameObjects.Sprite) {
-                    child.setTint(0xdddddd);
-                }
-            });
+            // 🐛 Bug 1 Fix: Visual feedback (pop/tint/alpha)
+            // Removed tint as per user request
 
             // 🐛 Bug 1 Fix: Initial hammer cursor position if active (fallback)
             if (this.deleteMode) {
@@ -230,7 +227,7 @@ export class GameScene extends Phaser.Scene {
             }
 
             // Initial position with offset to keep visible above finger
-            const initialYOffset = -100;
+            const initialYOffset = -20;
             this.draggedContainer.setPosition(_pointer.x, _pointer.y + initialYOffset);
         });
 
@@ -243,7 +240,7 @@ export class GameScene extends Phaser.Scene {
             if (!this.draggedContainer) return;
 
             // 🐛 Bug 2 Fix: Refined offset positioning so shape is always visible above finger
-            const dragYOffset = -100;
+            const dragYOffset = -20;
             this.draggedContainer.setPosition(pointer.x, pointer.y + dragYOffset);
 
             const placements = this.tryPlaceShape(this.draggedContainer);
@@ -257,7 +254,7 @@ export class GameScene extends Phaser.Scene {
             } else {
                 this.draggedContainer.setAlpha(0.65);
                 this.draggedContainer.list.forEach((child) => {
-                    if (child instanceof Phaser.GameObjects.Sprite) child.setTint(0xff5555); // Subtle red
+                    if (child instanceof Phaser.GameObjects.Sprite) child.clearTint();
                 });
             }
         });
