@@ -3,16 +3,20 @@ import { GameJuice } from '../utils/GameJuice';
 import { SoundManager } from '../managers/SoundManager';
 import { YandexManager } from '../managers/YandexManager';
 import { LocalizationManager } from '../managers/LocalizationManager';
+import { EventBus, GameEvents } from '../utils/EventBus';
 
 export class GameScene extends Phaser.Scene {
-    private grid: (Phaser.GameObjects.Image | null)[][] = [];
+    private grid: (Phaser.GameObjects.Sprite | null)[][] = [];
     private activeShapes: Phaser.GameObjects.Container[] = [];
     private score: number = 0;
     private highScore: number = 0;
     private isGameOver: boolean = false;
     private deleteMode: boolean = false;
     private comboStreak: number = 0;
+    private ghostSprites: Phaser.GameObjects.Sprite[] = [];
 
+    // Object Pooling
+    private blockPool: Phaser.GameObjects.Group | null = null;
 
     // DOM Elements references
     private domScoreValue: HTMLElement | null = null;
@@ -24,33 +28,18 @@ export class GameScene extends Phaser.Scene {
     // Dragging state
     private draggedContainer: Phaser.GameObjects.Container | null = null;
 
-    // Depth constants
-    private readonly DEPTH = {
-        board: 1,
-        gridFill: 2,
-        gridGlow: 3,
-        grid: 4,
-        placed: 6,
-        dockBase: 8,
-        dock: 10,
-        dragging: 20
-    };
-
-    private gridSize: number = 8;
     private startX: number = 0;
     private startY: number = 0;
     private dockTopY: number = 0;
     private shapeRowY: number = 0;
     private availableDockWidth: number = 0;
-    private dockPaddingX: number = 16;
-    private slotGap: number = 40;
 
     constructor() {
         super('GameScene');
     }
 
     create() {
-        // Hide Splash Screen Immediately
+        // Hide Splash Screen
         const splash = document.getElementById('splash');
         if (splash) {
             splash.classList.remove('is-visible');
@@ -63,27 +52,21 @@ export class GameScene extends Phaser.Scene {
         // Initialize DOM refs
         this.initDOM();
 
-        // Calculate Shape Bounds (Missing in consts)
-        SHAPE_DEFS.forEach(def => {
-            if (def.width !== undefined) return; // Already calculated
-
-            const xs = def.blocks.map(b => b[0]);
-            const ys = def.blocks.map(b => b[1]);
-            def.minX = Math.min(...xs);
-            def.maxX = Math.max(...xs);
-            def.minY = Math.min(...ys);
-            def.maxY = Math.max(...ys);
-            def.width = (def.maxX - def.minX + 1) * CELL_SIZE;
-            def.height = (def.maxY - def.minY + 1) * CELL_SIZE;
+        // Object Pooling Init
+        this.blockPool = this.add.group({
+            classType: Phaser.GameObjects.Sprite,
+            maxSize: 128, // Reasonable limit for 8x8 grid + dock
+            runChildUpdate: false
         });
 
+        // Pre-calculate shape bounds if not already done
+        this.calculateShapeBounds();
+
         // Calculate layout
-        const gridWidth = this.gridSize * CELL_SIZE;
-        const gridHeight = this.gridSize * CELL_SIZE;
+        const gridWidth = GAME_CONFIG.gridSize * CELL_SIZE;
+        const gridHeight = GAME_CONFIG.gridSize * CELL_SIZE;
 
-        // Shape definitions pre-calc (max dimensions)
         const maxShapeHeight = Math.max(...SHAPE_DEFS.map((def) => ((def.maxY || 0) - (def.minY || 0) + 1) * CELL_SIZE));
-
         const dockGap = 50;
         const dockPaddingBottom = 20;
 
@@ -94,10 +77,10 @@ export class GameScene extends Phaser.Scene {
         this.startX = Math.round((GAME_CONFIG.width - gridWidth) / 2);
         this.dockTopY = this.startY + gridHeight + dockGap;
         this.shapeRowY = Math.round(this.dockTopY + maxShapeHeight / 2);
-        this.availableDockWidth = GAME_CONFIG.width - this.dockPaddingX * 2;
+        this.availableDockWidth = GAME_CONFIG.width - GAME_CONFIG.dockPaddingX * 2;
 
         // Initialize Grid Array
-        this.grid = Array.from({ length: this.gridSize }, () => Array(this.gridSize).fill(null));
+        this.grid = Array.from({ length: GAME_CONFIG.gridSize }, () => Array(GAME_CONFIG.gridSize).fill(null));
 
         // Draw Board
         this.drawBoard(gridWidth, gridHeight);
@@ -105,17 +88,31 @@ export class GameScene extends Phaser.Scene {
         // Input Handlers
         this.setupInput();
 
-        // Powerups
-        this.setupPowerups();
+        // Powerups & Events
+        this.setupEvents();
 
         // Load High Score
-        this.loadHighScore(); // Local first, then Cloud update
+        this.loadHighScore();
 
         // Spawn Shapes
         this.spawnAllShapes();
 
-        // Check for "Hand" tutorial
+        // Tutorial
         this.checkTutorial();
+    }
+
+    private calculateShapeBounds() {
+        SHAPE_DEFS.forEach(def => {
+            if (def.width !== undefined) return;
+            const xs = def.blocks.map(b => b[0]);
+            const ys = def.blocks.map(b => b[1]);
+            def.minX = Math.min(...xs);
+            def.maxX = Math.max(...xs);
+            def.minY = Math.min(...ys);
+            def.maxY = Math.max(...ys);
+            def.width = (def.maxX - def.minX + 1) * CELL_SIZE;
+            def.height = (def.maxY - def.minY + 1) * CELL_SIZE;
+        });
     }
 
     private initDOM() {
@@ -125,20 +122,16 @@ export class GameScene extends Phaser.Scene {
         this.domModal = document.getElementById('gameover');
         this.domHammer = document.getElementById('power-hammer');
 
-        // Reset UI
         if (this.domHighLabel) this.domHighLabel.classList.remove('record-glow');
         this.updateScoreUI();
 
-        // Restart Button
         const restartBtn = document.getElementById('restart-btn');
         if (restartBtn) {
-            // Remove old listeners to avoid duplicates if re-created
             const newBtn = restartBtn.cloneNode(true);
             if (restartBtn.parentNode) restartBtn.parentNode.replaceChild(newBtn, restartBtn);
             newBtn.addEventListener('click', () => this.restartGame());
         }
 
-        // Share Button
         const shareBtn = document.getElementById('share-score');
         if (shareBtn) {
             const newBtn = shareBtn.cloneNode(true);
@@ -148,34 +141,28 @@ export class GameScene extends Phaser.Scene {
     }
 
     private drawBoard(gridWidth: number, gridHeight: number) {
-        // Board Main
         const boardGraphics = this.add.graphics();
-        boardGraphics.fillStyle(0x1e0b36, 1);
+        boardGraphics.fillStyle(GAME_CONFIG.colors.boardMain, 1);
         boardGraphics.fillRoundedRect(this.startX - 8, this.startY - 8, gridWidth + 16, gridHeight + 16, 14);
-        boardGraphics.lineStyle(2, 0x3d1c71, 1);
+        boardGraphics.lineStyle(2, GAME_CONFIG.colors.boardStroke, 1);
         boardGraphics.strokeRoundedRect(this.startX - 8, this.startY - 8, gridWidth + 16, gridHeight + 16, 14);
-        boardGraphics.setDepth(this.DEPTH.board);
+        boardGraphics.setDepth(GAME_CONFIG.depth.board);
 
-        // Grid Cells
-        const gridGlowGraphics = this.add.graphics({ lineStyle: { width: 3, color: 0xbc13fe, alpha: 0.18 } });
-        gridGlowGraphics.setDepth(this.DEPTH.gridGlow);
-        const gridGraphics = this.add.graphics({ lineStyle: { width: 1, color: 0x3d1c71, alpha: 0.75 } });
-        gridGraphics.setDepth(this.DEPTH.grid);
+        const gridGlowGraphics = this.add.graphics({ lineStyle: { width: 3, color: GAME_CONFIG.colors.gridGlow, alpha: 0.18 } });
+        gridGlowGraphics.setDepth(GAME_CONFIG.depth.gridGlow);
+        const gridGraphics = this.add.graphics({ lineStyle: { width: 1, color: GAME_CONFIG.colors.boardStroke, alpha: 0.75 } });
+        gridGraphics.setDepth(GAME_CONFIG.depth.grid);
 
-        for (let x = 0; x < this.gridSize; x++) {
-            for (let y = 0; y < this.gridSize; y++) {
+        for (let x = 0; x < GAME_CONFIG.gridSize; x++) {
+            for (let y = 0; y < GAME_CONFIG.gridSize; y++) {
                 const cell = this.add.image(
                     this.startX + x * CELL_SIZE + CELL_SIZE / 2,
                     this.startY + y * CELL_SIZE + CELL_SIZE / 2,
                     'cell_bg'
                 );
-                cell.setDepth(this.DEPTH.gridFill);
-
-                // Add interactivity for Hammer mode
-                cell.setInteractive({ useHandCursor: false });
-                cell.setData('gridX', x);
-                cell.setData('gridY', y);
-                cell.on('pointerdown', () => this.handleCellClick(x, y));
+                cell.setDepth(GAME_CONFIG.depth.gridFill);
+                cell.setInteractive();
+                // Removed redundant click handler as it was empty
 
                 gridGlowGraphics.strokeRect(this.startX + x * CELL_SIZE, this.startY + y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
                 gridGraphics.strokeRect(this.startX + x * CELL_SIZE, this.startY + y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
@@ -184,8 +171,29 @@ export class GameScene extends Phaser.Scene {
     }
 
     private setupInput() {
-        this.input.on('gameobjectdown', (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
-            if (this.deleteMode || this.isGameOver) return;
+        // Global Hammer Handler (Reliability Fix)
+        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            if (!this.deleteMode) return;
+
+            // Calculate grid coordinates mathematically
+            const xRel = pointer.x - this.startX;
+            const yRel = pointer.y - this.startY;
+
+            const gx = Math.floor(xRel / CELL_SIZE);
+            const gy = Math.floor(yRel / CELL_SIZE);
+
+            // Valid grid check
+            if (gx >= 0 && gx < GAME_CONFIG.gridSize && gy >= 0 && gy < GAME_CONFIG.gridSize) {
+                // 3x3 Area Clear on ANY valid grid click
+                this.handleHammerClick(gx, gy);
+            }
+        });
+
+        this.input.on('gameobjectdown', (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
+            if (this.isGameOver) return;
+
+            // If hammer is active, block all dragging
+            if (this.deleteMode) return;
 
             const container = gameObject.getData('parentContainer') as Phaser.GameObjects.Container;
             if (!container || !this.activeShapes.includes(container)) return;
@@ -194,36 +202,69 @@ export class GameScene extends Phaser.Scene {
             SoundManager.getInstance().play('drag');
 
             this.draggedContainer = container;
-            this.draggedContainer.setDepth(this.DEPTH.dragging);
-            this.draggedContainer.setScale(1);
-            this.draggedContainer.x = pointer.x;
-            this.draggedContainer.y = pointer.y;
+            this.draggedContainer.setDepth(GAME_CONFIG.depth.dragging); // depth: 100
+
+            // 🐛 Bug 1 Fix: Visual feedback (pop/tint/alpha)
+            this.tweens.add({
+                targets: this.draggedContainer,
+                scaleX: 1.1,
+                scaleY: 1.1,
+                alpha: 0.8,
+                duration: 100,
+                ease: 'Back.easeOut'
+            });
+
+            this.draggedContainer.list.forEach(child => {
+                if (child instanceof Phaser.GameObjects.Sprite) {
+                    child.setTint(0xdddddd);
+                }
+            });
+
+            // 🐛 Bug 1 Fix: Initial hammer cursor position if active (fallback)
+            if (this.deleteMode) {
+                const hammer = document.getElementById('hammer-cursor');
+                if (hammer) {
+                    hammer.style.left = `${_pointer.x}px`;
+                    hammer.style.top = `${_pointer.y}px`;
+                }
+            }
+
+            // Initial position with offset to keep visible above finger
+            const initialYOffset = -100;
+            this.draggedContainer.setPosition(_pointer.x, _pointer.y + initialYOffset);
         });
 
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            // 🐛 Bug 1 Fix: Custom Hammer Cursor Follow
+            if (this.deleteMode) {
+                this.updateHammerPosition(pointer.x, pointer.y, true);
+            }
+
             if (!this.draggedContainer) return;
 
-            this.draggedContainer.x = pointer.x;
-            this.draggedContainer.y = pointer.y;
+            // 🐛 Bug 2 Fix: Refined offset positioning so shape is always visible above finger
+            const dragYOffset = -100;
+            this.draggedContainer.setPosition(pointer.x, pointer.y + dragYOffset);
 
-            // Visual feedback
-            const blocks = this.draggedContainer.getData('shapeBlocks');
-            const canFit = blocks ? this.canPlaceBlocksAnywhere(blocks) : true;
+            const placements = this.tryPlaceShape(this.draggedContainer);
+            this.updateGhost(placements, this.draggedContainer.getData('textureKey'));
 
-            if (canFit) {
-                this.draggedContainer.setAlpha(0.8);
+            if (placements) {
+                this.draggedContainer.setAlpha(1.0);
                 this.draggedContainer.list.forEach((child) => {
-                    if (child instanceof Phaser.GameObjects.Image) child.clearTint();
+                    if (child instanceof Phaser.GameObjects.Sprite) child.clearTint();
                 });
             } else {
-                this.draggedContainer.setAlpha(0.5);
+                this.draggedContainer.setAlpha(0.65);
                 this.draggedContainer.list.forEach((child) => {
-                    if (child instanceof Phaser.GameObjects.Image) child.setTint(0xff4444);
+                    if (child instanceof Phaser.GameObjects.Sprite) child.setTint(0xff5555); // Subtle red
                 });
             }
         });
 
         this.input.on('pointerup', () => {
+            this.clearGhost(); // Always clear ghost on release
+
             if (!this.draggedContainer || this.isGameOver) {
                 this.draggedContainer = null;
                 return;
@@ -235,32 +276,29 @@ export class GameScene extends Phaser.Scene {
             const placements = this.tryPlaceShape(container);
 
             if (!placements) {
-                // Return to dock
                 this.tweens.add({
                     targets: container,
                     x: container.getData('homeX'),
                     y: container.getData('homeY'),
+                    scaleX: GAME_CONFIG.dockScale,
+                    scaleY: GAME_CONFIG.dockScale,
+                    alpha: 1,
                     duration: 220,
                     ease: 'Sine.easeInOut',
                     onComplete: () => {
-                        container.setDepth(this.DEPTH.dock);
-                        container.setScale(this.DOCK_SCALE); // previewScale
+                        container.setDepth(GAME_CONFIG.depth.dock);
                         container.list.forEach((child) => {
-                            if (child instanceof Phaser.GameObjects.Image) child.clearTint();
+                            if (child instanceof Phaser.GameObjects.Sprite) child.clearTint();
                         });
-                        container.setAlpha(1);
                     }
                 });
                 return;
             }
 
-            // Place it
             const textureKey = container.getData('textureKey') || BLOCK_TEXTURES[0].key;
             this.snapAndPlace(placements, textureKey);
 
-            // Score and Feedback
-            const placedBlockCount = placements.length;
-            const placementScore = placedBlockCount * 10;
+            const placementScore = placements.length * GAME_CONFIG.pointsPerBlock;
             this.score += placementScore;
             this.updateScoreUI();
 
@@ -270,59 +308,76 @@ export class GameScene extends Phaser.Scene {
             this.checkAndClearLines();
 
             const index = this.activeShapes.indexOf(container);
-            if (index !== -1) {
-                this.activeShapes.splice(index, 1);
-            }
+            if (index !== -1) this.activeShapes.splice(index, 1);
+
+            // Release blocks back to pool efficiently
+            const blocksToRelease = container.list.filter(c => c instanceof Phaser.GameObjects.Sprite) as Phaser.GameObjects.Sprite[];
+            blocksToRelease.forEach(block => {
+                this.blockPool?.killAndHide(block);
+                this.add.existing(block); // Re-add to scene display list from container
+            });
+            container.removeAll(false); // Do NOT destroy the children, we want to reuse them
             container.destroy();
 
-            if (this.activeShapes.length === 0) {
-                this.spawnAllShapes();
-            }
-
+            if (this.activeShapes.length === 0) this.spawnAllShapes();
             this.checkGameOver();
         });
     }
 
-    private tryPlaceShape(container: Phaser.GameObjects.Container): { gridX: number, gridY: number, offsetX: number, offsetY: number }[] | null {
-        if (!container.list) return null;
+    private setupEvents() {
+        EventBus.on(GameEvents.ACTIVATE_HAMMER, this.enableHammerMode, this);
+        EventBus.on(GameEvents.ACTIVATE_SHUFFLE, this.performShuffle, this);
 
-        // Filter only Image children (blocks)
-        const blocks = container.list.filter(child => child instanceof Phaser.GameObjects.Image) as Phaser.GameObjects.Image[];
+        const hammerBtn = document.getElementById('power-hammer');
+        const shuffleBtn = document.getElementById('power-shuffle');
+
+        if (hammerBtn) hammerBtn.onclick = () => this.activateHammer();
+        if (shuffleBtn) shuffleBtn.onclick = () => this.activateShuffle();
+    }
+
+    private tryPlaceShape(container: Phaser.GameObjects.Container): { gridX: number, gridY: number }[] | null {
+        const blocks = container.list.filter(child => child instanceof Phaser.GameObjects.Sprite) as Phaser.GameObjects.Sprite[];
         if (blocks.length === 0) return null;
 
-        const placements: { gridX: number, gridY: number, offsetX: number, offsetY: number }[] = [];
-
+        const placements: { gridX: number, gridY: number }[] = [];
         for (const block of blocks) {
             const worldX = container.x + block.x;
             const worldY = container.y + block.y;
             const gridX = Math.round((worldX - this.startX - CELL_SIZE / 2) / CELL_SIZE);
             const gridY = Math.round((worldY - this.startY - CELL_SIZE / 2) / CELL_SIZE);
 
-            if (gridX < 0 || gridX >= this.gridSize || gridY < 0 || gridY >= this.gridSize) return null;
+            if (gridX < 0 || gridX >= GAME_CONFIG.gridSize || gridY < 0 || gridY >= GAME_CONFIG.gridSize) return null;
             if (this.grid[gridY][gridX]) return null;
-
-            placements.push({ gridX, gridY, offsetX: block.x, offsetY: block.y });
+            placements.push({ gridX, gridY });
         }
-
         return placements;
     }
 
     private snapAndPlace(placements: any[], textureKey: string) {
-        // We don't really need to move the container since it gets destroyed, 
-        // but for visual continuity or if we had animation, we might.
-        // The important part is updating the grid.
+        placements.forEach((p) => {
+            const px = this.startX + p.gridX * CELL_SIZE + CELL_SIZE / 2;
+            const py = this.startY + p.gridY * CELL_SIZE + CELL_SIZE / 2;
 
-        placements.forEach((placement: any) => {
-            const px = this.startX + placement.gridX * CELL_SIZE + CELL_SIZE / 2;
-            const py = this.startY + placement.gridY * CELL_SIZE + CELL_SIZE / 2;
-            const sprite = this.add.image(px, py, textureKey);
-            sprite.setDepth(this.DEPTH.placed);
+            // Get from pool
+            let sprite = this.blockPool?.get(px, py, textureKey) as Phaser.GameObjects.Sprite;
+            if (!sprite) {
+                sprite = this.add.sprite(px, py, textureKey);
+                this.blockPool?.add(sprite);
+            }
 
-            // Add click handler for hammer (delete mode)
-            sprite.setInteractive({ useHandCursor: false });
-            sprite.on('pointerdown', () => this.handleBlockClick(sprite, placement.gridX, placement.gridY));
+            sprite.setTexture(textureKey); // Explicitly set texture to avoid pool mixups
+            sprite.clearTint(); // Clear any drag/canFit tints
+            sprite.setAlpha(1); // Reset alpha from potential greying/ghosting
+            sprite.setActive(true).setVisible(true).setDepth(GAME_CONFIG.depth.placed);
+            sprite.setInteractive();
+            sprite.setInteractive();
+            sprite.removeAllListeners('pointerdown');
 
-            this.grid[placement.gridY][placement.gridX] = sprite;
+            // Store coordinates for Hammer tool
+            sprite.setData('gridX', p.gridX);
+            sprite.setData('gridY', p.gridY);
+
+            this.grid[p.gridY][p.gridX] = sprite;
         });
     }
 
@@ -330,39 +385,34 @@ export class GameScene extends Phaser.Scene {
         const rowsToClear: number[] = [];
         const colsToClear: number[] = [];
 
-        for (let y = 0; y < this.gridSize; y++) {
+        for (let y = 0; y < GAME_CONFIG.gridSize; y++) {
             if (this.grid[y].every(cell => cell !== null)) rowsToClear.push(y);
         }
-
-        for (let x = 0; x < this.gridSize; x++) {
+        for (let x = 0; x < GAME_CONFIG.gridSize; x++) {
             let full = true;
-            for (let y = 0; y < this.gridSize; y++) {
-                if (!this.grid[y][x]) {
-                    full = false;
-                    break;
-                }
+            for (let y = 0; y < GAME_CONFIG.gridSize; y++) {
+                if (!this.grid[y][x]) { full = false; break; }
             }
             if (full) colsToClear.push(x);
         }
 
         if (rowsToClear.length === 0 && colsToClear.length === 0) {
             this.comboStreak = 0;
+            this.updateShapeVisuals(); // CRITICAL: Update visuals even if no lines cleared
             return;
         }
 
-        const spritesToDestroy = new Set<Phaser.GameObjects.Image>();
-
+        const spritesToDestroy = new Set<Phaser.GameObjects.Sprite>();
         rowsToClear.forEach(y => {
-            for (let x = 0; x < this.gridSize; x++) {
+            for (let x = 0; x < GAME_CONFIG.gridSize; x++) {
                 if (this.grid[y][x]) {
                     spritesToDestroy.add(this.grid[y][x]!);
                     this.grid[y][x] = null;
                 }
             }
         });
-
         colsToClear.forEach(x => {
-            for (let y = 0; y < this.gridSize; y++) {
+            for (let y = 0; y < GAME_CONFIG.gridSize; y++) {
                 if (this.grid[y][x]) {
                     spritesToDestroy.add(this.grid[y][x]!);
                     this.grid[y][x] = null;
@@ -370,80 +420,59 @@ export class GameScene extends Phaser.Scene {
             }
         });
 
-        // Visuals
+        // VFX
         rowsToClear.forEach(row => {
             const y = this.startY + row * CELL_SIZE + CELL_SIZE / 2;
-            GameJuice.flashLineDOM(this.startX + (this.gridSize * CELL_SIZE) / 2, y, this.gridSize * CELL_SIZE, CELL_SIZE, true);
+            GameJuice.flashLineDOM(this.startX + (GAME_CONFIG.gridSize * CELL_SIZE) / 2, y, GAME_CONFIG.gridSize * CELL_SIZE, CELL_SIZE, true);
         });
         colsToClear.forEach(col => {
             const x = this.startX + col * CELL_SIZE + CELL_SIZE / 2;
-            GameJuice.flashLineDOM(x, this.startY + (this.gridSize * CELL_SIZE) / 2, CELL_SIZE, this.gridSize * CELL_SIZE, false);
+            GameJuice.flashLineDOM(x, this.startY + (GAME_CONFIG.gridSize * CELL_SIZE) / 2, CELL_SIZE, GAME_CONFIG.gridSize * CELL_SIZE, false);
         });
 
         spritesToDestroy.forEach(sprite => {
-            const gridX = Math.round((sprite.x - this.startX - CELL_SIZE / 2) / CELL_SIZE);
-            const gridY = Math.round((sprite.y - this.startY - CELL_SIZE / 2) / CELL_SIZE);
-            GameJuice.onBlockClear(sprite, gridX, gridY, this.startX, this.startY);
-            sprite.destroy();
+            const gx = Math.round((sprite.x - this.startX - CELL_SIZE / 2) / CELL_SIZE);
+            const gy = Math.round((sprite.y - this.startY - CELL_SIZE / 2) / CELL_SIZE);
+            GameJuice.onBlockClear(sprite, gx, gy, this.startX, this.startY);
+            this.blockPool?.killAndHide(sprite);
         });
 
-        // Scoring
         const clearedLines = rowsToClear.length + colsToClear.length;
-        this.comboStreak += 1;
+        this.comboStreak++;
 
-        const BASE_POINTS = 100;
         let multiLineMultiplier = 1;
         if (clearedLines === 2) multiLineMultiplier = 1.5;
         else if (clearedLines === 3) multiLineMultiplier = 2.0;
         else if (clearedLines >= 4) multiLineMultiplier = 3.0;
 
         const streakMultiplier = 1 + ((this.comboStreak - 1) * 0.5);
-        let earnedPoints = Math.round((clearedLines * BASE_POINTS * multiLineMultiplier) * streakMultiplier);
-
-        if (clearedLines >= 3) {
-            earnedPoints += 500;
-        }
+        let earnedPoints = Math.round((clearedLines * GAME_CONFIG.basePointsPerLine * multiLineMultiplier) * streakMultiplier);
+        if (clearedLines >= 3) earnedPoints += GAME_CONFIG.jackpotBonus;
 
         this.score += earnedPoints;
         this.updateScoreUI();
         this.updateHighScore();
         SoundManager.getInstance().play('clear');
 
-        const centerX = this.startX + (this.gridSize * CELL_SIZE) / 2;
-        const centerY = this.startY + (this.gridSize * CELL_SIZE) / 2;
-        GameJuice.onLineClear(clearedLines, this.comboStreak, centerX, centerY);
-
-        // Explicitly update shape visuals to see if they fit now
+        GameJuice.onLineClear(clearedLines, this.comboStreak, this.startX + (GAME_CONFIG.gridSize * CELL_SIZE) / 2, this.startY + (GAME_CONFIG.gridSize * CELL_SIZE) / 2);
         this.updateShapeVisuals();
     }
 
-    private readonly DOCK_SCALE = 0.75;
-
     private spawnAllShapes() {
-        // Reroll logic or bag system could go here
         const defs = [
             Phaser.Utils.Array.GetRandom(SHAPE_DEFS),
             Phaser.Utils.Array.GetRandom(SHAPE_DEFS),
             Phaser.Utils.Array.GetRandom(SHAPE_DEFS)
         ];
 
-        // Calculate total width using SCALED widths
-        // We use the shape's real width * scale, plus gaps
-        const totalWidth = defs.reduce((sum, d) => sum + (d.width || 0) * this.DOCK_SCALE, 0) + this.slotGap * 2;
-
-        // Center the group
-        let cursorX = this.dockPaddingX + Math.max(0, this.availableDockWidth - totalWidth) / 2;
+        const totalWidth = defs.reduce((sum, d) => sum + (d.width || 0) * GAME_CONFIG.dockScale, 0) + GAME_CONFIG.slotGap * 2;
+        let cursorX = GAME_CONFIG.dockPaddingX + Math.max(0, this.availableDockWidth - totalWidth) / 2;
 
         defs.forEach((def) => {
-            const scaledWidth = (def.width || 0) * this.DOCK_SCALE;
-
-            // Move cursor to center of this shape's slot
+            const scaledWidth = (def.width || 0) * GAME_CONFIG.dockScale;
             cursorX += scaledWidth / 2;
-
             this.createShape(def, cursorX, this.shapeRowY);
-
-            // Move cursor past this shape + gap
-            cursorX += scaledWidth / 2 + this.slotGap;
+            cursorX += scaledWidth / 2 + GAME_CONFIG.slotGap;
         });
 
         this.updateShapeVisuals();
@@ -455,24 +484,28 @@ export class GameScene extends Phaser.Scene {
         const offsetY = -(def.height || 0) / 2 + CELL_SIZE / 2;
 
         const container = this.add.container(x, y);
-        container.setData('homeX', x);
-        container.setData('homeY', y);
-        container.setData('shapeBlocks', def.blocks);
-        container.setData('textureKey', textureKey);
-        container.setDepth(this.DEPTH.dock);
-        container.setScale(this.DOCK_SCALE); // Use the constant
+        container.setData({ homeX: x, homeY: y, shapeBlocks: def.blocks, textureKey: textureKey });
+        container.setDepth(GAME_CONFIG.depth.dock).setScale(GAME_CONFIG.dockScale);
 
         def.blocks.forEach(([bx, by]: number[]) => {
-            const blockX = (bx - (def.minX || 0)) * CELL_SIZE + offsetX;
-            const blockY = (by - (def.minY || 0)) * CELL_SIZE + offsetY;
-            const block = this.add.image(blockX, blockY, textureKey);
-            block.setOrigin(0.5, 0.5);
-            block.setData('offsetX', blockX);
-            block.setData('offsetY', blockY);
+            const bxPos = (bx - (def.minX || 0)) * CELL_SIZE + offsetX;
+            const byPos = (by - (def.minY || 0)) * CELL_SIZE + offsetY;
+
+            let block = this.blockPool?.get(bxPos, byPos, textureKey) as Phaser.GameObjects.Sprite;
+            if (!block) {
+                block = this.add.sprite(bxPos, byPos, textureKey);
+                this.blockPool?.add(block);
+            }
+            block.setTexture(textureKey); // Explicitly set texture
+            block.clearTint(); // Clear any previous tints
+            block.setActive(true).setVisible(true);
             block.setData('parentContainer', container);
 
-            // Hit area for dragging
-            block.setInteractive({ useHandCursor: true });
+            // 🐛 Bug 2 Fix: Clear old grid data from pooled block
+            block.setData('gridX', undefined);
+            block.setData('gridY', undefined);
+
+            block.setInteractive({ useHandCursor: !this.deleteMode });
             container.add(block);
         });
 
@@ -481,34 +514,28 @@ export class GameScene extends Phaser.Scene {
 
     private checkGameOver() {
         if (this.isGameOver) return;
-
         const stillActive = this.activeShapes.filter(s => s && s.active);
         if (stillActive.length === 0) return;
 
-        const canAnyFit = stillActive.some(shape => {
-            const blocks = shape.getData('shapeBlocks');
-            return this.canPlaceBlocksAnywhere(blocks);
-        });
-
-        if (!canAnyFit) {
+        const canFit = stillActive.some(s => this.canPlaceBlocksAnywhere(s.getData('shapeBlocks')));
+        if (!canFit) {
             this.isGameOver = true;
             this.setDeleteMode(false);
             SoundManager.getInstance().play('gameover');
             YandexManager.getInstance().onGameOver(this.score, this.highScore);
-            this.showGameOverUI();
+            if (this.domModal) this.domModal.classList.add('is-visible');
         }
     }
 
     private canPlaceBlocksAnywhere(blocks: number[][]): boolean {
-        for (let baseX = 0; baseX < this.gridSize; baseX++) {
-            for (let baseY = 0; baseY < this.gridSize; baseY++) {
+        for (let bx = 0; bx < GAME_CONFIG.gridSize; bx++) {
+            for (let by = 0; by < GAME_CONFIG.gridSize; by++) {
                 let fits = true;
-                for (const [bx, by] of blocks) {
-                    const gx = baseX + bx;
-                    const gy = baseY + by;
-                    if (gx < 0 || gx >= this.gridSize || gy < 0 || gy >= this.gridSize || this.grid[gy][gx]) {
-                        fits = false;
-                        break;
+                for (const [ox, oy] of blocks) {
+                    const gx = bx + ox;
+                    const gy = by + oy;
+                    if (gx < 0 || gx >= GAME_CONFIG.gridSize || gy < 0 || gy >= GAME_CONFIG.gridSize || this.grid[gy][gx]) {
+                        fits = false; break;
                     }
                 }
                 if (fits) return true;
@@ -518,59 +545,20 @@ export class GameScene extends Phaser.Scene {
     }
 
     private updateShapeVisuals() {
-        this.activeShapes.forEach(shape => {
-            const blocks = shape.getData('shapeBlocks');
-            const canFit = this.canPlaceBlocksAnywhere(blocks);
-
-            shape.list.forEach((child) => {
-                if (child instanceof Phaser.GameObjects.Image) {
-                    if (canFit) {
-                        child.clearTint();
-                    } else {
-                        child.setTint(0x888888);
-                    }
+        this.activeShapes.forEach(s => {
+            const canFit = this.canPlaceBlocksAnywhere(s.getData('shapeBlocks'));
+            s.list.forEach(child => {
+                if (child instanceof Phaser.GameObjects.Sprite) {
+                    canFit ? child.clearTint() : child.setTint(0x888888);
                 }
             });
-
-            if (canFit) {
-                shape.setAlpha(1);
-            } else {
-                shape.setAlpha(0.5);
-            }
+            s.setAlpha(canFit ? 1 : 0.5);
         });
-    }
-
-    // --- Powerups ---
-
-    private setupPowerups() {
-        const hammerBtn = document.getElementById('power-hammer');
-        const shuffleBtn = document.getElementById('power-shuffle');
-
-        if (hammerBtn) {
-            const newBtn = hammerBtn.cloneNode(true);
-            if (hammerBtn.parentNode) hammerBtn.parentNode.replaceChild(newBtn, hammerBtn);
-            (newBtn as HTMLElement).onclick = () => this.activateHammer();
-        }
-
-        if (shuffleBtn) {
-            const newBtn = shuffleBtn.cloneNode(true);
-            if (shuffleBtn.parentNode) shuffleBtn.parentNode.replaceChild(newBtn, shuffleBtn);
-            (newBtn as HTMLElement).onclick = () => this.activateShuffle();
-        }
-
-        // Listeners for Yandex Reward Grants (failsafe + standard flow)
-        window.addEventListener('activateHammer', () => this.enableHammerMode());
-        window.addEventListener('activateShuffle', () => this.performShuffle());
     }
 
     private activateHammer() {
         if (this.isGameOver) return;
-        // If already in delete mode, toggle off
-        if (this.deleteMode) {
-            this.setDeleteMode(false);
-            return;
-        }
-
+        if (this.deleteMode) { this.setDeleteMode(false); return; }
         YandexManager.getInstance().showRewardAd('hammer');
     }
 
@@ -579,14 +567,15 @@ export class GameScene extends Phaser.Scene {
         YandexManager.getInstance().showRewardAd('shuffle');
     }
 
-    private enableHammerMode() {
-        this.setDeleteMode(true);
-        // Visual cue handled by setDeleteMode toggling CSS classes
-    }
+    private enableHammerMode() { this.setDeleteMode(true); }
 
     private performShuffle() {
-        // Destroy existing shapes
-        this.activeShapes.forEach(shape => shape.destroy());
+        this.activeShapes.forEach(s => {
+            s.list.forEach(child => {
+                if (child instanceof Phaser.GameObjects.Sprite) this.blockPool?.killAndHide(child);
+            });
+            s.destroy();
+        });
         this.activeShapes = [];
         this.spawnAllShapes();
         SoundManager.getInstance().play('shuffle');
@@ -594,52 +583,92 @@ export class GameScene extends Phaser.Scene {
 
     private setDeleteMode(enabled: boolean) {
         this.deleteMode = enabled;
+        // Visual indicator in UI
         document.body.classList.toggle('delete-mode', enabled);
-        if (this.domHammer) {
-            this.domHammer.classList.toggle('powerup--active', enabled);
+        if (this.domHammer) this.domHammer.classList.toggle('powerup--active', enabled);
+        // Change cursor to hammer/crosshair
+        if (enabled) {
+            this.input.setDefaultCursor('none');
+            // 🚀 Fix: Disable hand cursor on all interactive blocks to prevent browser override
+            this.setAllBlocksHandCursor(false);
+            // Initial state is hidden until mouse moves into canvas
+            this.updateHammerPosition(this.input.activePointer.x, this.input.activePointer.y, false);
+        } else {
+            this.input.setDefaultCursor('default');
+            this.setAllBlocksHandCursor(true);
+            this.updateHammerPosition(0, 0, false); // Hide on disable
         }
     }
 
-    private handleCellClick(_gridX: number, _gridY: number) {
-        // If clicking empty cell in delete mode, maybe cancel? Or do nothing?
-        // Original logic didn't specify, but usually we just do nothing.
+    private setAllBlocksHandCursor(enabled: boolean) {
+        // Clear hand cursor for grid
+        this.grid.flat().forEach(sprite => {
+            if (sprite) {
+                if (sprite.input) sprite.input.cursor = enabled ? 'pointer' : 'none';
+            }
+        });
+        // Clear hand cursor for dock
+        this.activeShapes.forEach(container => {
+            container.list.forEach(child => {
+                if (child instanceof Phaser.GameObjects.Sprite && child.input) {
+                    child.input.cursor = enabled ? 'pointer' : 'none';
+                }
+            });
+        });
     }
 
-    private handleBlockClick(sprite: Phaser.GameObjects.Image, gridX: number, gridY: number) {
+    private updateHammerPosition(x: number, y: number, visible: boolean) {
+        const hammer = document.getElementById('hammer-cursor');
+        if (!hammer) return;
+
+        if (!visible) {
+            hammer.classList.remove('is-visible');
+            return;
+        }
+
+        const container = document.getElementById('game-container');
+        if (container) {
+            const rect = container.getBoundingClientRect();
+
+            // Tighten container check to avoid "floating" over sidebar
+            // If pointer is far outside, hide it
+            if (x < -10 || x > GAME_CONFIG.width + 10 || y < -10 || y > GAME_CONFIG.height + 10) {
+                hammer.classList.remove('is-visible');
+                return;
+            }
+
+            hammer.classList.add('is-visible');
+            requestAnimationFrame(() => {
+                hammer.style.left = `${rect.left + x}px`;
+                hammer.style.top = `${rect.top + y}px`;
+            });
+        }
+    }
+
+
+    private handleHammerClick(gridX: number, gridY: number) {
         if (!this.deleteMode) return;
 
-        // Destroy block
-        GameJuice.createShockwave(sprite.x, sprite.y);
+        const centerX = this.startX + gridX * CELL_SIZE + CELL_SIZE / 2;
+        const centerY = this.startY + gridY * CELL_SIZE + CELL_SIZE / 2;
+
+        GameJuice.createShockwave(centerX, centerY);
         GameJuice.playHammerSound();
-        GameJuice.createExplosion(sprite.x, sprite.y, '#FF0055', 12);
+        GameJuice.createExplosion(centerX, centerY, '#FFD700', 20); // Gold explosion for impact
 
-        this.grid[gridY][gridX] = null;
-        sprite.destroy();
-
-        // 3x3 Blast Effect (from game.js logic it seemed to be 3x3 or single? user said "Hammer and Shuffle... preserved exactly")
-        // Looking at game.js lines 1215+, it calls 'hammer' sound.
-        // Wait, standard hammer usually breaks 1 block or 3x3?
-        // In most block puzzles it is 1 block or 3x3 area. 
-        // Let's check logic... game.js doesn't actually show the logic for WHAT gets destroyed in the snippet I saw.
-        // Assume single block for safety unless I see "3x3" explicitly. 
-        // Actually line 1180 says "HAMMER 3x3 POWER-UP EFFECTS".
-        // Okay, it's 3x3!
-
-        const range = [-1, 0, 1];
         let destroyedCount = 0;
+        const range = [-1, 0, 1];
 
         range.forEach(dy => {
             range.forEach(dx => {
                 const nx = gridX + dx;
                 const ny = gridY + dy;
-                // Don't destroy the center again, handled above. Wait, logic above destroyed center.
-                if (dx === 0 && dy === 0) { destroyedCount++; return; }
 
-                if (nx >= 0 && nx < this.gridSize && ny >= 0 && ny < this.gridSize) {
+                if (nx >= 0 && nx < GAME_CONFIG.gridSize && ny >= 0 && ny < GAME_CONFIG.gridSize) {
                     const target = this.grid[ny][nx];
                     if (target) {
                         GameJuice.createExplosion(target.x, target.y, '#FF0055', 8);
-                        target.destroy();
+                        this.blockPool?.killAndHide(target);
                         this.grid[ny][nx] = null;
                         destroyedCount++;
                     }
@@ -647,38 +676,25 @@ export class GameScene extends Phaser.Scene {
             });
         });
 
-        // Award points
-        const points = GameJuice.showHammerScore(destroyedCount, sprite.x, sprite.y);
-        this.score += points;
-        this.updateScoreUI();
+        if (destroyedCount > 0) {
+            const pts = GameJuice.showHammerScore(destroyedCount, centerX, centerY);
+            this.score += pts;
+            this.updateScoreUI();
+        }
 
-        // Exit delete mode
         this.setDeleteMode(false);
-
-        // After destroying, check if shapes can fit now
         this.updateShapeVisuals();
     }
-
-    // --- Scoring & UI ---
 
     private updateScoreUI() {
         if (this.domScoreValue) this.domScoreValue.textContent = String(this.score);
     }
 
     private loadHighScore() {
-        try {
-            const stored = localStorage.getItem('crystal_puzzle_highscore');
-            this.highScore = stored ? Number(stored) : 0;
-            this.updateHighScoreUI();
-        } catch (e) { }
-
-        window.addEventListener('gameDataLoaded', (e: any) => {
-            if (e.detail && e.detail.highScore) {
-                const cloudScore = Number(e.detail.highScore);
-                if (cloudScore > this.highScore) {
-                    this.highScore = cloudScore;
-                    this.updateHighScoreUI();
-                }
+        EventBus.on(GameEvents.GAME_DATA_LOADED, (data: any) => {
+            if (data && data.highScore > this.highScore) {
+                this.highScore = data.highScore;
+                this.updateHighScoreUI();
             }
         });
     }
@@ -687,80 +703,53 @@ export class GameScene extends Phaser.Scene {
         if (this.score > this.highScore) {
             this.highScore = this.score;
             this.updateHighScoreUI();
-
-            if (this.domHighLabel) {
-                this.domHighLabel.classList.add('record-glow');
-            }
-            // Show in center of board
-            const centerX = this.startX + (this.gridSize * CELL_SIZE) / 2;
-            const centerY = this.startY + (this.gridSize * CELL_SIZE) / 2;
-            GameJuice.showFloatingText(LocalizationManager.getInstance().t('new_record'), centerX, centerY, 'excellent');
+            if (this.domHighLabel) this.domHighLabel.classList.add('record-glow');
+            GameJuice.showFloatingText(LocalizationManager.getInstance().t('new_record'), this.startX + (GAME_CONFIG.gridSize * CELL_SIZE) / 2, this.startY + (GAME_CONFIG.gridSize * CELL_SIZE) / 2, 'excellent');
         }
     }
-
 
     private updateHighScoreUI() {
         if (this.domHighValue) this.domHighValue.textContent = String(this.highScore);
     }
 
-    private showGameOverUI() {
-        if (this.domModal) this.domModal.classList.add('is-visible');
-    }
-
     private restartGame() {
         if (this.domModal) this.domModal.classList.remove('is-visible');
-
-        // Helper to clear board
-        for (let y = 0; y < this.gridSize; y++) {
-            for (let x = 0; x < this.gridSize; x++) {
+        for (let y = 0; y < GAME_CONFIG.gridSize; y++) {
+            for (let x = 0; x < GAME_CONFIG.gridSize; x++) {
                 if (this.grid[y][x]) {
-                    this.grid[y][x]!.destroy();
+                    this.blockPool?.killAndHide(this.grid[y][x]!);
                     this.grid[y][x] = null;
                 }
             }
         }
-
-        this.activeShapes.forEach(s => s.destroy());
+        this.activeShapes.forEach(s => {
+            s.list.forEach(c => { if (c instanceof Phaser.GameObjects.Sprite) this.blockPool?.killAndHide(c); });
+            s.destroy();
+        });
         this.activeShapes = [];
         this.score = 0;
         this.isGameOver = false;
         this.comboStreak = 0;
         this.updateScoreUI();
         if (this.domHighLabel) this.domHighLabel.classList.remove('record-glow');
-
         this.spawnAllShapes();
-
-        // Interstitial Ad
         YandexManager.getInstance().showInterstitialAd();
     }
 
     private shareScore() {
-        const message = LocalizationManager.getInstance().t('share_message').replace('{score}', String(this.score));
-        // Simple share implementation calling a global function or handled here?
-        // game.js had a complex modal for sharing. We should reuse strict Logic if possible.
-        // For now, let's just use the simplest approach or triggers the existing DOM modal logic if it was preserved in index.html (it is).
-
-        // Trigger the share modal logic
-        // We can dispatch an event or reimplement the openShareModal logic here?
-        // Since we are refactoring, let's keep it clean.
-        // We'll dispatch a custom event that the HTML can listen to or handle it entirely here if we want to be strict TS.
-        // I'll reimplement the openShareModal basic toggle here for now, assuming the DOM exists.
-
         const modal = document.getElementById('share-modal');
         if (modal) {
             const scoreEl = document.getElementById('share-modal-score');
             const msgEl = document.getElementById('share-modal-message');
-            if (scoreEl) scoreEl.textContent = `${this.score}`;
-            if (msgEl) msgEl.textContent = message;
+            if (scoreEl) scoreEl.textContent = String(this.score);
+            if (msgEl) msgEl.textContent = LocalizationManager.getInstance().t('share_message').replace('{score}', String(this.score));
             modal.classList.add('is-visible');
-            // Close handler should be attached in index.html or initDOM
-            document.getElementById('share-modal-close')?.addEventListener('click', () => modal.classList.remove('is-visible'));
+            const close = document.getElementById('share-modal-close');
+            if (close) close.onclick = () => modal.classList.remove('is-visible');
         }
     }
 
     private checkTutorial() {
-        // Check localStorage logic
-        // Handled in DOM normally, but we can do it here
         if (!localStorage.getItem('tutorial_seen')) {
             const hand = document.getElementById('hand-tutorial');
             if (hand) {
@@ -769,5 +758,48 @@ export class GameScene extends Phaser.Scene {
                 localStorage.setItem('tutorial_seen', '1');
             }
         }
+    }
+
+    private updateGhost(placements: { gridX: number, gridY: number }[] | null, textureKey: string) {
+        this.clearGhost();
+
+        if (placements) {
+            placements.forEach(p => {
+                const px = this.startX + p.gridX * CELL_SIZE + CELL_SIZE / 2;
+                const py = this.startY + p.gridY * CELL_SIZE + CELL_SIZE / 2;
+
+                let ghost = this.blockPool?.get(px, py, textureKey) as Phaser.GameObjects.Sprite;
+                if (!ghost) {
+                    ghost = this.add.sprite(px, py, textureKey);
+                    this.blockPool?.add(ghost);
+                }
+                ghost.setTexture(textureKey);
+                ghost.setActive(true).setVisible(true).setDepth(GAME_CONFIG.depth.gridFill + 0.1);
+                ghost.setAlpha(0.35);
+                ghost.setTint(0xffffff);
+                this.ghostSprites.push(ghost);
+            });
+        }
+    }
+
+    private clearGhost() {
+        this.ghostSprites.forEach(s => this.blockPool?.killAndHide(s));
+        this.ghostSprites = [];
+    }
+
+    shutdown() {
+        // Correctly remove all EventBus listeners
+        EventBus.off(GameEvents.ACTIVATE_HAMMER);
+        EventBus.off(GameEvents.ACTIVATE_SHUFFLE);
+        EventBus.off(GameEvents.GAME_DATA_LOADED);
+
+        // Remove input listeners
+        this.input.off('gameobjectdown');
+        this.input.off('pointermove');
+        this.input.off('pointerup');
+
+        // Clear references
+        this.blockPool?.clear(true, true);
+        this.blockPool = null;
     }
 }

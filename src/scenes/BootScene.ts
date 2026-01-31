@@ -2,6 +2,7 @@ import { CELL_SIZE, BLOCK_TEXTURES, GAME_CONFIG } from '../consts';
 import { LocalizationManager } from '../managers/LocalizationManager';
 import { SoundManager } from '../managers/SoundManager';
 import { YandexManager } from '../managers/YandexManager';
+import { EventBus, GameEvents } from '../utils/EventBus';
 
 export class BootScene extends Phaser.Scene {
     constructor() {
@@ -9,15 +10,13 @@ export class BootScene extends Phaser.Scene {
     }
 
     preload() {
-        // Preload simple assets if any
-        // Audio is loaded via SoundManager/DOM, but we could load sprites here
-
-        // Load fonts or other external assets
-        // For this refactor, we are mostly procedural
+        // Assets are generated procedurally in create() or loaded elsewhere.
+        // If the user adds a real atlas later, it can be loaded here:
+        // this.load.atlas('spritesheet', 'assets/spritesheet.png', 'assets/spritesheet.json');
     }
 
     create() {
-        // Generate textures
+        // Generate procedural textures (fallback or supplemental)
         this.createBlockTextures();
         this.createBackgroundTexture();
         this.createDockGlowTexture();
@@ -54,20 +53,30 @@ export class BootScene extends Phaser.Scene {
             startGame();
         }
 
+        // Use EventBus for data loaded signal
+        const onDataLoaded = () => {
+            EventBus.off(GameEvents.GAME_DATA_LOADED, onDataLoaded);
+            console.log('Game Data Loaded via EventBus');
+            safeStart();
+        };
+        EventBus.on(GameEvents.GAME_DATA_LOADED, onDataLoaded);
+
+        // Initiate load
         YandexManager.getInstance().loadGameData()
             .then(() => {
-                console.log('Game Data Loaded');
-                safeStart();
+                // If already started via EventBus, no-op
             })
             .catch((e) => {
                 console.error('Game Data Load Failed', e);
+                EventBus.off(GameEvents.GAME_DATA_LOADED, onDataLoaded);
                 safeStart();
             });
 
-        // Safety timeout (3 seconds)
-        this.time.delayedCall(3000, () => {
+        // Safety timeout (4 seconds)
+        this.time.delayedCall(4000, () => {
             if (!gameStarted) {
                 console.warn('Game Load Timeout - Forcing Start');
+                EventBus.off(GameEvents.GAME_DATA_LOADED, onDataLoaded);
                 safeStart();
             }
         });

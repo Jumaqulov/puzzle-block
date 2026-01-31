@@ -50,5 +50,41 @@ export const GAME_CONFIG = {
     minWidth: 320,
     minHeight: 480,
     maxWidth: 540,
-    maxHeight: 960
+    maxHeight: 960,
+
+    gridSize: 8,
+    dockPaddingX: 16,
+    slotGap: 40,
+    dockScale: 0.75,
+
+    // Scoring
+    basePointsPerLine: 100,
+    pointsPerBlock: 10,
+    jackpotBonus: 500,
+
+    // Depth Values
+    depth: {
+        board: 1,
+        gridFill: 2,
+        gridGlow: 3,
+        grid: 4,
+        placed: 6,
+        dockBase: 8,
+        dock: 10,
+        dragging: 100
+    },
+
+    // Colors
+    colors: {
+        background: 0x0F051D,
+        boardMain: 0x1e0b36,
+        boardStroke: 0x3d1c71,
+        gridGlow: 0xbc13fe,
+        error: 0xff4444,
+        crystalGlow: 0xbc13fe
+    }
+};
+
+export const SECURITY_CONFIG = {
+    salt: 'crystal_puzzle_secret_key_2024'
 };

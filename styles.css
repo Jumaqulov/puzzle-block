@@ -1193,11 +1193,15 @@ body.delete-mode #game-container canvas {
     font-size: 32px;
     color: #FFD700;
     filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.8));
-    transform: translate(-8px, -8px);
+    transform: translate(-50%, -50%);
     display: none;
 }
 
-body.delete-mode .hammer-cursor {
+/* body.delete-mode .hammer-cursor {
+    display: block;
+} */
+
+.hammer-cursor.is-visible {
     display: block;
 }
 

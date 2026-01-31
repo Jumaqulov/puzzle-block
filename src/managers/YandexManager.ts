@@ -1,5 +1,6 @@
 import { SoundManager } from './SoundManager';
-
+import { EventBus, GameEvents } from '../utils/EventBus';
+import { SECURITY_CONFIG } from '../consts';
 
 export class YandexManager {
     private static instance: YandexManager;
@@ -33,16 +34,11 @@ export class YandexManager {
     }
 
     private isYandexEnvironment(): boolean {
-        // Safe check for window existence
         if (typeof window === 'undefined') return false;
-
         if ((window as any).YandexGamesSDKEnvironment) return true;
-
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('app-id') || urlParams.has('draft')) return true;
-
         if (window.location.hostname.includes('yandex')) return true;
-
         return false;
     }
 
@@ -65,12 +61,10 @@ export class YandexManager {
         }
 
         try {
-            // Dynamic SDK Loading
             if (typeof YaGames === 'undefined') {
                 await this.loadSDKScript();
             }
 
-            // Initialize SDK
             this.ysdk = await YaGames.init();
             window.ysdk = this.ysdk;
 
@@ -81,9 +75,7 @@ export class YandexManager {
 
             this.isInitialized = true;
 
-            window.dispatchEvent(new CustomEvent('yandexSDKReady', {
-                detail: { sdk: this.ysdk, player: this.player }
-            }));
+            EventBus.emit(GameEvents.YANDEX_READY, { sdk: this.ysdk, player: this.player });
 
             return true;
         } catch (error) {
@@ -96,16 +88,14 @@ export class YandexManager {
     private initFallbackMode(): void {
         this.isInitialized = false;
         this.ysdk = null;
-        window.dispatchEvent(new CustomEvent('yandexSDKReady', {
-            detail: { sdk: null, player: null }
-        }));
+        EventBus.emit(GameEvents.YANDEX_READY, { sdk: null, player: null });
     }
 
     public async initPlayer(): Promise<YandexPlayer | null> {
         if (!this.ysdk) return null;
 
         try {
-            this.player = await this.ysdk.getPlayer({ scopes: false } as any); // Type assertion if needed
+            this.player = await this.ysdk.getPlayer({ scopes: false } as any);
             const mode = this.player.getMode();
             this.isAuthorized = (mode !== 'lite');
 
@@ -114,9 +104,7 @@ export class YandexManager {
                 const photo = this.player.getPhoto('medium');
                 console.log(`[YaSDK] Player: ${name}`);
 
-                window.dispatchEvent(new CustomEvent('playerAuthorized', {
-                    detail: { name, photo }
-                }));
+                EventBus.emit(GameEvents.PLAYER_AUTHORIZED, { name, photo });
             }
 
             return this.player;
@@ -147,28 +135,26 @@ export class YandexManager {
 
         if (this.isAdShowing) return false;
 
-        return new Promise((resolve) => {
+        return new Promise<boolean>((resolve) => {
             this.isAdShowing = true;
             this.ysdk!.adv.showRewardedVideo({
                 callbacks: {
                     onOpen: () => {
                         SoundManager.getInstance().setMuted(true);
-                        if (typeof window.game !== 'undefined' && window.game && window.game.loop) {
-                            window.game.loop.sleep();
-                        }
+                        if (window.game && window.game.loop) window.game.loop.sleep();
                         if (this.callbacks.onAdOpen) this.callbacks.onAdOpen();
                     },
                     onClose: () => {
                         this.isAdShowing = false;
                         SoundManager.getInstance().setMuted(false);
-                        if (typeof window.game !== 'undefined' && window.game && window.game.loop) {
-                            window.game.loop.wake();
-                        }
+                        if (window.game && window.game.loop) window.game.loop.wake();
                         if (this.callbacks.onAdClose) this.callbacks.onAdClose();
-                        resolve(true); // Assuming success if closed normally
+                        resolve(true);
                     },
                     onRewarded: () => {
+                        console.log(`[YaSDK] Reward granted for: ${rewardType}`);
                         this.grantReward(rewardType);
+                        EventBus.emit(GameEvents.REWARD_SUCCESS, rewardType);
                         if (this.callbacks.onRewardGranted) {
                             this.callbacks.onRewardGranted(rewardType);
                         }
@@ -176,24 +162,29 @@ export class YandexManager {
                     onError: (e: any) => {
                         this.isAdShowing = false;
                         SoundManager.getInstance().setMuted(false);
-                        if (typeof window.game !== 'undefined' && window.game && window.game.loop) {
-                            window.game.loop.wake();
-                        }
+                        if (window.game && window.game.loop) window.game.loop.wake();
                         console.error('Ad Error', e);
+                        // Using localized message if possible, or fallback
+                        alert("Reklama yuklanmadi. Internetni tekshiring!");
                         resolve(false);
                     }
                 }
             });
+        }).catch((err) => {
+            this.isAdShowing = false;
+            console.error('Ad Exception', err);
+            alert("Reklama yuklanmadi. Internetni tekshiring!");
+            return false;
         });
     }
 
     private grantReward(rewardType: string): void {
         switch (rewardType) {
             case 'hammer':
-                window.dispatchEvent(new CustomEvent('activateHammer'));
+                EventBus.emit(GameEvents.ACTIVATE_HAMMER);
                 break;
             case 'shuffle':
-                window.dispatchEvent(new CustomEvent('activateShuffle'));
+                EventBus.emit(GameEvents.ACTIVATE_SHUFFLE);
                 break;
         }
     }
@@ -201,52 +192,60 @@ export class YandexManager {
     public async showInterstitialAd(): Promise<boolean> {
         if (!this.ysdk || this.isAdShowing) return false;
 
-        return new Promise((resolve) => {
+        return new Promise<boolean>((resolve) => {
             this.isAdShowing = true;
 
             this.ysdk!.adv.showFullscreenAdv({
                 callbacks: {
                     onOpen: () => {
                         SoundManager.getInstance().setMuted(true);
-                        if (typeof window.game !== 'undefined' && window.game && window.game.loop) {
-                            window.game.loop.sleep();
-                        }
+                        if (window.game && window.game.loop) window.game.loop.sleep();
                         if (this.callbacks.onAdOpen) this.callbacks.onAdOpen();
                     },
                     onClose: (wasShown: boolean) => {
                         this.isAdShowing = false;
                         SoundManager.getInstance().setMuted(false);
-                        if (typeof window.game !== 'undefined' && window.game && window.game.loop) {
-                            window.game.loop.wake();
-                        }
+                        if (window.game && window.game.loop) window.game.loop.wake();
                         if (this.callbacks.onAdClose) this.callbacks.onAdClose();
                         resolve(wasShown);
                     },
                     onError: (_e: any) => {
                         this.isAdShowing = false;
                         SoundManager.getInstance().setMuted(false);
-                        if (typeof window.game !== 'undefined' && window.game && window.game.loop) {
-                            window.game.loop.wake();
-                        }
+                        if (window.game && window.game.loop) window.game.loop.wake();
                         resolve(false);
                     },
                     onOffline: () => {
                         this.isAdShowing = false;
                         SoundManager.getInstance().setMuted(false);
-                        if (typeof window.game !== 'undefined' && window.game && window.game.loop) {
-                            window.game.loop.wake();
-                        }
+                        if (window.game && window.game.loop) window.game.loop.wake();
                         resolve(false);
                     }
                 }
             });
+        }).catch(() => {
+            this.isAdShowing = false;
+            return false;
         });
     }
 
-    // ... save/load methods ...
+    // --- Security Hashing ---
+    private generateHash(score: number): string {
+        const str = `${SECURITY_CONFIG.salt}_${score}_${SECURITY_CONFIG.salt}`;
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash |= 0;
+        }
+        return hash.toString(16);
+    }
+
+    private verifyHash(score: number, hash: string): boolean {
+        return this.generateHash(score) === hash;
+    }
 
     public async saveGameData(data: any): Promise<boolean> {
-        // ... implementation existing ...
         if (!this.player || !this.isAuthorized) {
             try {
                 localStorage.setItem('crystal_puzzle_data', JSON.stringify(data));
@@ -266,30 +265,38 @@ export class YandexManager {
     }
 
     public async loadGameData(): Promise<any> {
+        let rawData: any = null;
+
         if (!this.player || !this.isAuthorized) {
             try {
-                const data = localStorage.getItem('crystal_puzzle_data');
-                if (data) {
-                    const parsed = JSON.parse(data);
-                    window.dispatchEvent(new CustomEvent('gameDataLoaded', { detail: parsed }));
-                    return parsed;
-                }
+                const stored = localStorage.getItem('crystal_puzzle_data');
+                if (stored) rawData = JSON.parse(stored);
             } catch (e) { }
-            return null;
+        } else {
+            try {
+                rawData = await this.player.getData();
+            } catch (error) { }
         }
 
-        try {
-            const data = await this.player.getData();
-            window.dispatchEvent(new CustomEvent('gameDataLoaded', { detail: data }));
-            return data;
-        } catch (error) {
-            return null;
+        if (rawData) {
+            // Anti-cheat verification
+            if (rawData.highScore !== undefined) {
+                if (!rawData.hash || !this.verifyHash(rawData.highScore, rawData.hash)) {
+                    console.warn('[Security] High score tampered or missing hash! Resetting.');
+                    rawData.highScore = 0;
+                }
+            }
+            EventBus.emit(GameEvents.GAME_DATA_LOADED, rawData);
         }
+
+        return rawData;
     }
 
     public async saveHighScore(score: number): Promise<boolean> {
+        const hash = this.generateHash(score);
         return await this.saveGameData({
             highScore: score,
+            hash: hash,
             lastPlayed: Date.now()
         });
     }
