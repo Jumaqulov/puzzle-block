@@ -1,6 +1,6 @@
 import { SoundManager } from './SoundManager';
 import { EventBus, GameEvents } from '../utils/EventBus';
-import { SECURITY_CONFIG } from '../consts';
+import { ScoreIntegrity } from '../utils/ScoreIntegrity';
 
 export class YandexManager {
     private static instance: YandexManager;
@@ -229,21 +229,7 @@ export class YandexManager {
         });
     }
 
-    // --- Security Hashing ---
-    private generateHash(score: number): string {
-        const str = `${SECURITY_CONFIG.salt}_${score}_${SECURITY_CONFIG.salt}`;
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash |= 0;
-        }
-        return hash.toString(16);
-    }
-
-    private verifyHash(score: number, hash: string): boolean {
-        return this.generateHash(score) === hash;
-    }
+    // --- Score Integrity ---
 
     public async saveGameData(data: any): Promise<boolean> {
         if (!this.player || !this.isAuthorized) {
@@ -279,11 +265,14 @@ export class YandexManager {
         }
 
         if (rawData) {
-            // Anti-cheat verification
+            // Multi-layer integrity verification
             if (rawData.highScore !== undefined) {
-                if (!rawData.hash || !this.verifyHash(rawData.highScore, rawData.hash)) {
-                    console.warn('[Security] High score tampered or missing hash! Resetting.');
+                const result = ScoreIntegrity.validatePayload(rawData);
+                if (!result.valid) {
+                    console.warn('[Security] Score integrity check failed! Resetting.');
                     rawData.highScore = 0;
+                } else {
+                    rawData.highScore = result.score;
                 }
             }
             EventBus.emit(GameEvents.GAME_DATA_LOADED, rawData);
@@ -293,12 +282,13 @@ export class YandexManager {
     }
 
     public async saveHighScore(score: number): Promise<boolean> {
-        const hash = this.generateHash(score);
-        return await this.saveGameData({
-            highScore: score,
-            hash: hash,
-            lastPlayed: Date.now()
-        });
+        if (!ScoreIntegrity.isScorePlausible(score)) {
+            console.warn('[Security] Attempted to save implausible score:', score);
+            return false;
+        }
+
+        const payload = ScoreIntegrity.createPayload(score);
+        return await this.saveGameData(payload);
     }
 
     public async submitScore(score: number): Promise<boolean> {
@@ -313,8 +303,9 @@ export class YandexManager {
         }
     }
 
-    public async onGameOver(_score: number, highScore: number): Promise<void> {
-        await this.saveHighScore(highScore);
-        await this.submitScore(highScore);
+    public async onGameOver(score: number, highScore: number): Promise<void> {
+        const newHighScore = Math.max(score, highScore);
+        await this.saveHighScore(newHighScore);
+        await this.submitScore(score);
     }
 }

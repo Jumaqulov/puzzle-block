@@ -85,6 +85,4 @@ export const GAME_CONFIG = {
     }
 };
 
-export const SECURITY_CONFIG = {
-    salt: 'crystal_puzzle_secret_key_2024'
-};
+// Security is handled internally by ScoreIntegrity module
