@@ -560,6 +560,30 @@ export class GameScene extends Phaser.Scene {
     private activateHammer() {
         if (this.isGameOver) return;
         if (this.deleteMode) { this.setDeleteMode(false); return; }
+
+        // Check if grid has any blocks to hammer
+        let hasBlocks = false;
+        for (let y = 0; y < GAME_CONFIG.gridSize; y++) {
+            for (let x = 0; x < GAME_CONFIG.gridSize; x++) {
+                if (this.grid[y][x]) {
+                    hasBlocks = true;
+                    break;
+                }
+            }
+            if (hasBlocks) break;
+        }
+
+        if (!hasBlocks) {
+            const i18n = LocalizationManager.getInstance();
+            GameJuice.showFloatingText(
+                i18n.t('no_blocks'),
+                this.startX + (GAME_CONFIG.gridSize * CELL_SIZE) / 2,
+                this.startY + (GAME_CONFIG.gridSize * CELL_SIZE) / 2,
+                'normal'
+            );
+            return;
+        }
+
         YandexManager.getInstance().showRewardAd('hammer');
     }
 
@@ -731,36 +755,34 @@ export class GameScene extends Phaser.Scene {
     private restartGame() {
         if (this.domModal) this.domModal.classList.remove('is-visible');
 
-        // Show interstitial ad first, then reset game after ad completes
-        const doRestart = () => {
-            for (let y = 0; y < GAME_CONFIG.gridSize; y++) {
-                for (let x = 0; x < GAME_CONFIG.gridSize; x++) {
-                    if (this.grid[y][x]) {
-                        this.blockPool?.killAndHide(this.grid[y][x]!);
-                        this.grid[y][x] = null;
-                    }
+        // 1. Restart immediately — don't wait for ad
+        for (let y = 0; y < GAME_CONFIG.gridSize; y++) {
+            for (let x = 0; x < GAME_CONFIG.gridSize; x++) {
+                if (this.grid[y][x]) {
+                    this.blockPool?.killAndHide(this.grid[y][x]!);
+                    this.grid[y][x] = null;
                 }
             }
-            this.activeShapes.forEach(s => {
-                s.list.forEach(c => { if (c instanceof Phaser.GameObjects.Sprite) this.blockPool?.killAndHide(c); });
-                s.destroy();
-            });
-            this.activeShapes = [];
-            this.score = 0;
-            this.isGameOver = false;
-            this.comboStreak = 0;
-            this.draggedContainer = null;
-            this.setDeleteMode(false);
-            this.clearGhost();
-            this.updateScoreUI();
-            if (this.domHighLabel) this.domHighLabel.classList.remove('record-glow');
-            this.spawnAllShapes();
-        };
+        }
+        this.activeShapes.forEach(s => {
+            s.list.forEach(c => { if (c instanceof Phaser.GameObjects.Sprite) this.blockPool?.killAndHide(c); });
+            s.destroy();
+        });
+        this.activeShapes = [];
+        this.score = 0;
+        this.isGameOver = false;
+        this.comboStreak = 0;
+        this.draggedContainer = null;
+        this.setDeleteMode(false);
+        this.clearGhost();
+        this.updateScoreUI();
+        if (this.domHighLabel) this.domHighLabel.classList.remove('record-glow');
 
-        // Try interstitial ad, then restart regardless of result
-        YandexManager.getInstance().showInterstitialAd()
-            .then(() => doRestart())
-            .catch(() => doRestart());
+        // 2. Spawn new shapes
+        this.spawnAllShapes();
+
+        // 3. Show interstitial ad (game already works in background)
+        YandexManager.getInstance().showInterstitialAd().catch(() => { });
     }
 
     private initSettings() {

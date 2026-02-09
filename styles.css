@@ -1931,25 +1931,138 @@ body.delete-mode #game-container canvas {
     line-height: 1.5;
 }
 
-/* Show warning in landscape mode on mobile/tablet */
+/* Landscape on mobile/tablet — game playable in horizontal */
 @media (max-width: 1023px) and (orientation: landscape) {
-    .landscape-warning {
-        display: flex !important;
+    body {
+        padding: 2px 6px !important;
+        align-items: center !important;
+        overflow: hidden !important;
     }
 
-    /* Hide all game content in landscape */
-    .game-shell,
-    .language-selector,
-    .modal {
+    .landscape-warning {
         display: none !important;
     }
 
-    /* Also hide background elements for cleaner look */
+    /* Row layout: HUD | Game | Powerups */
+    .game-shell {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px !important;
+        width: 100% !important;
+        max-width: none !important;
+        padding-bottom: 0 !important;
+    }
+
+    /* HUD — compact left column, vertically centered */
+    .side-hud {
+        flex: 0 0 60px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 2px !important;
+        padding: 0 !important;
+        width: 60px !important;
+        min-width: 0 !important;
+        text-align: center !important;
+    }
+
+    .side-hud__group {
+        margin-bottom: 0 !important;
+    }
+
+    .side-hud__label {
+        font-size: 7px !important;
+        margin-bottom: 0 !important;
+        letter-spacing: 0.5px !important;
+        opacity: 0.7;
+    }
+
+    .side-hud__value {
+        font-size: 13px !important;
+    }
+
+    .side-hud__value--score {
+        font-size: 15px !important;
+    }
+
+    .settings-btn {
+        width: 26px !important;
+        height: 26px !important;
+        font-size: 13px !important;
+        margin-top: 4px !important;
+    }
+
+    /* Game container — fill available height, width follows 450:700 ratio */
+    #game-container {
+        flex: 0 0 auto !important;
+        height: calc(100vh - 8px) !important;
+        width: calc((100vh - 8px) * 0.643) !important;
+        max-width: calc(100vw - 140px) !important;
+        max-height: calc(100vh - 8px) !important;
+    }
+
+    /* Powerups — compact right column, vertically centered */
+    .powerups {
+        position: static !important;
+        flex: 0 0 56px !important;
+        flex-direction: column !important;
+        transform: none !important;
+        left: auto !important;
+        bottom: auto !important;
+        width: 56px !important;
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        padding: 0 !important;
+        gap: 6px !important;
+        align-items: center !important;
+    }
+
+    .powerup {
+        width: 46px !important;
+        height: 46px !important;
+        padding: 4px !important;
+        min-width: 0 !important;
+        border-radius: 12px !important;
+    }
+
+    .powerup__icon {
+        font-size: 16px !important;
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    .powerup__label {
+        font-size: 6px !important;
+        letter-spacing: 0 !important;
+    }
+
+    .ad-badge {
+        font-size: 6px !important;
+        padding: 0px 3px !important;
+        top: -4px !important;
+        right: -4px !important;
+    }
+
+    /* Language selector — top right, smaller */
+    .language-selector {
+        display: block !important;
+        transform: scale(0.65) !important;
+        transform-origin: top right !important;
+        top: 2px !important;
+        right: 2px !important;
+    }
+
+    /* Dimmed backgrounds */
     #starfield-canvas,
     .nebula-layer,
     .cosmic-dust,
     .vignette {
-        opacity: 0.3;
+        opacity: 0.3 !important;
     }
 }
 
@@ -2054,7 +2167,7 @@ body.delete-mode #game-container canvas {
    ============================================ */
 
 /* Prevent HUD and power-ups from overlapping game area */
-@media (max-height: 700px) {
+@media (max-height: 700px) and (orientation: portrait) {
     .game-shell {
         gap: 8px;
     }
@@ -2083,7 +2196,7 @@ body.delete-mode #game-container canvas {
 }
 
 /* Very short screens (e.g., iPhone SE in portrait with browser chrome) */
-@media (max-height: 600px) {
+@media (max-height: 600px) and (orientation: portrait) {
     .side-hud {
         padding: 6px 10px;
     }

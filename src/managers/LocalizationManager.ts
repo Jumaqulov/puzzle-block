@@ -45,7 +45,8 @@ export class LocalizationManager {
             reset_confirm_text: 'All records and saved data will be deleted. This action cannot be undone.',
             reset_cancel: 'Cancel',
             reset_confirm: 'Reset',
-            reset_success: 'Progress has been reset'
+            reset_success: 'Progress has been reset',
+            no_blocks: 'No blocks!'
         },
         ru: {
             game_title: 'КРИСТАЛЛ ПАЗЛ',
@@ -85,7 +86,8 @@ export class LocalizationManager {
             reset_confirm_text: 'Все рекорды и сохранённые данные будут удалены. Это действие необратимо.',
             reset_cancel: 'Отмена',
             reset_confirm: 'Сбросить',
-            reset_success: 'Прогресс сброшен'
+            reset_success: 'Прогресс сброшен',
+            no_blocks: 'Нет блоков!'
         },
         uz: {
             game_title: 'KRISTAL PAZL',
@@ -125,7 +127,8 @@ export class LocalizationManager {
             reset_confirm_text: "Barcha rekordlar va saqlangan ma'lumotlar o'chib ketadi. Bu amalni qaytarib bo'lmaydi.",
             reset_cancel: 'Bekor qilish',
             reset_confirm: 'Tozalash',
-            reset_success: 'Progress tozalandi'
+            reset_success: 'Progress tozalandi',
+            no_blocks: "Bloklar yo'q!"
         }
     };
 
