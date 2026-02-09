@@ -291,9 +291,7 @@ export class GameScene extends Phaser.Scene {
                     ease: 'Sine.easeInOut',
                     onComplete: () => {
                         container.setDepth(GAME_CONFIG.depth.dock);
-                        container.list.forEach((child) => {
-                            if (child instanceof Phaser.GameObjects.Sprite) child.clearTint();
-                        });
+                        this.updateShapeVisuals();
                     }
                 });
                 return;
