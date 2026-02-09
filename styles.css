@@ -1468,123 +1468,129 @@ body.delete-mode #game-container canvas {
     position: fixed;
     inset: 0;
     z-index: 9999;
-    background: rgba(15, 5, 29, 0.98);
-    backdrop-filter: blur(20px);
+    background: linear-gradient(135deg, #080212 0%, #0F051D 40%, #1A0C2E 70%, #0F051D 100%);
     justify-content: center;
     align-items: center;
     flex-direction: column;
     padding: 40px;
     text-align: center;
+    overflow: hidden;
+}
+
+/* Decorative glow effects for polished look */
+.landscape-warning::before {
+    content: '';
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(188, 19, 254, 0.2) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.landscape-warning::after {
+    content: '';
+    position: absolute;
+    bottom: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(0, 212, 255, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.landscape-warning__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.landscape-warning__logo {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: #ffffff;
+    text-shadow: 0 0 20px rgba(188, 19, 254, 0.6), 0 0 40px rgba(188, 19, 254, 0.3);
+    margin-bottom: 8px;
 }
 
 .landscape-warning__icon {
-    margin-bottom: 30px;
     display: flex;
     justify-content: center;
     align-items: center;
-    /* Ikonka o'lchami */
     width: 80px;
     height: 80px;
+    margin-bottom: 8px;
 }
 
-/* SVG ning umumiy stili va animatsiyasi */
+/* SVG phone rotation animation */
 .svg-rotate-phone {
     width: 100%;
     height: auto;
-    /* Asosiy neon rang (Cyan) */
     stroke: var(--cyan);
-    /* Yorishish effekti */
-    filter: drop-shadow(0 0 8px var(--cyan));
-    /* ANIMATSIYA: 90 gradus aylanish */
+    filter: drop-shadow(0 0 8px var(--cyan)) drop-shadow(0 0 16px rgba(0, 212, 255, 0.3));
     animation: professionalRotate 2.5s infinite ease-in-out;
     transform-origin: center;
-    /* Markazdan aylanish */
 }
 
-/* Telefon elementlarining ichki ranglari (ixtiyoriy o'zgartirish mumkin) */
 .phone-body,
 .phone-top,
 .phone-home {
     vector-effect: non-scaling-stroke;
-    /* Chiziq qalinligi o'zgarmasligi uchun */
 }
 
-/* Home tugmasini sal boshqacharoq rang qilish (masalan, binafsha) */
 .phone-home {
     stroke: var(--glow);
     fill: rgba(157, 0, 255, 0.2);
 }
 
-
-/* --- YANGI ANIMATSIYA --- */
-/* Yonboshdan (Landscape) -> Tikkaga (Portrait) aniq o'tish */
 @keyframes professionalRotate {
     0% {
         transform: rotate(-90deg);
-        /* Boshlanishi: YONBOSH holat */
         opacity: 0;
-        /* Ko'rinmasdan boshlanadi */
     }
 
     20% {
         transform: rotate(-90deg);
-        /* Yonbosh holatda paydo bo'ladi */
         opacity: 1;
     }
 
     50% {
         transform: rotate(0deg);
-        /* TIKKA holatga keladi */
     }
 
     80% {
         transform: rotate(0deg);
-        /* Tikka holatda biroz turadi */
         opacity: 1;
     }
 
     100% {
         transform: rotate(0deg);
         opacity: 0;
-        /* Sekin yo'qoladi */
     }
-}
-
-.landscape-warning__icon i {
-    display: block;
-    animation: rotateDevice 2s ease-in-out infinite;
 }
 
 .landscape-warning__title {
-    font-family: var(--font-display);
-    font-size: 24px;
-    font-weight: 700;
-    margin-bottom: 16px;
-    color: var(--glow);
-    text-shadow: 0 0 20px rgba(188, 19, 254, 0.6);
+    font-family: var(--font-body);
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffffff;
+    text-shadow: 0 0 10px rgba(188, 19, 254, 0.4);
 }
 
 .landscape-warning__text {
-    font-size: 16px;
-    color: rgba(255, 255, 255, 0.8);
-    max-width: 400px;
-    line-height: 1.6;
-}
-
-@keyframes rotateDevice {
-
-    0%,
-    100% {
-        transform: rotate(0deg);
-    }
-
-    25% {
-        transform: rotate(-15deg);
-    }
-
-    75% {
-        transform: rotate(15deg);
-    }
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+    max-width: 300px;
+    line-height: 1.5;
 }
 
 /* Show warning in landscape mode on mobile/tablet */

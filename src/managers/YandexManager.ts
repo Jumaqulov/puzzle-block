@@ -137,6 +137,8 @@ export class YandexManager {
 
         return new Promise<boolean>((resolve) => {
             this.isAdShowing = true;
+            let rewarded = false;
+
             this.ysdk!.adv.showRewardedVideo({
                 callbacks: {
                     onOpen: () => {
@@ -149,11 +151,18 @@ export class YandexManager {
                         SoundManager.getInstance().setMuted(false);
                         if (window.game && window.game.loop) window.game.loop.wake();
                         if (this.callbacks.onAdClose) this.callbacks.onAdClose();
-                        resolve(true);
+
+                        // Grant reward AFTER game loop is awake
+                        if (rewarded) {
+                            setTimeout(() => {
+                                this.grantReward(rewardType);
+                            }, 100);
+                        }
+                        resolve(rewarded);
                     },
                     onRewarded: () => {
                         console.log(`[YaSDK] Reward granted for: ${rewardType}`);
-                        this.grantReward(rewardType);
+                        rewarded = true;
                         EventBus.emit(GameEvents.REWARD_SUCCESS, rewardType);
                         if (this.callbacks.onRewardGranted) {
                             this.callbacks.onRewardGranted(rewardType);
@@ -164,7 +173,6 @@ export class YandexManager {
                         SoundManager.getInstance().setMuted(false);
                         if (window.game && window.game.loop) window.game.loop.wake();
                         console.error('Ad Error', e);
-                        // Using localized message if possible, or fallback
                         alert("Reklama yuklanmadi. Internetni tekshiring!");
                         resolve(false);
                     }

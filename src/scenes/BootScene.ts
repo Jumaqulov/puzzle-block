@@ -26,21 +26,7 @@ export class BootScene extends Phaser.Scene {
         LocalizationManager.getInstance().init();
         SoundManager.getInstance().init();
 
-        // Fake progress bar
-        const splashBar = document.getElementById('splash-bar');
-        const splashPercent = document.getElementById('splash-percent');
-        let progress = 0;
-        const progressInterval = setInterval(() => {
-            progress += 5;
-            if (progress > 90) progress = 90;
-            if (splashBar) splashBar.style.width = `${progress}%`;
-            if (splashPercent) splashPercent.textContent = `${progress}%`;
-        }, 50);
-
         const startGame = () => {
-            clearInterval(progressInterval);
-            if (splashBar) splashBar.style.width = '100%';
-            if (splashPercent) splashPercent.textContent = '100%';
             this.scene.start('GameScene');
         };
 

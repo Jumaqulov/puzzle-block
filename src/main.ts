@@ -9,6 +9,9 @@ import { Starfield } from './visuals/Starfield';
 import '@phosphor-icons/web/regular'; // Loads regular weight icons
 import '../styles.css';
 
+// Signal that CSS is loaded — removes FOUC protection
+document.documentElement.classList.add('css-loaded');
+
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     backgroundColor: GAME_CONFIG.backgroundColor,
@@ -41,6 +44,13 @@ async function initializeApp() {
     window.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('selectstart', (e) => e.preventDefault());
     window.addEventListener('dragstart', (e) => e.preventDefault());
+
+    // Try to lock screen to portrait mode
+    try {
+        if (screen.orientation && (screen.orientation as any).lock) {
+            (screen.orientation as any).lock('portrait').catch(() => { });
+        }
+    } catch (_e) { /* Not supported */ }
 
     // Initialize Starfield
     const starfield = new Starfield();

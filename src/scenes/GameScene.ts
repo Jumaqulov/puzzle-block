@@ -27,6 +27,7 @@ export class GameScene extends Phaser.Scene {
 
     // Dragging state
     private draggedContainer: Phaser.GameObjects.Container | null = null;
+    private hammerTimeout: ReturnType<typeof setTimeout> | null = null;
 
     private startX: number = 0;
     private startY: number = 0;
@@ -186,6 +187,10 @@ export class GameScene extends Phaser.Scene {
             if (gx >= 0 && gx < GAME_CONFIG.gridSize && gy >= 0 && gy < GAME_CONFIG.gridSize) {
                 // 3x3 Area Clear on ANY valid grid click
                 this.handleHammerClick(gx, gy);
+            } else {
+                // Clicked outside grid — cancel hammer mode
+                this.setDeleteMode(false);
+                this.updateShapeVisuals();
             }
         });
 
@@ -582,6 +587,13 @@ export class GameScene extends Phaser.Scene {
         // Visual indicator in UI
         document.body.classList.toggle('delete-mode', enabled);
         if (this.domHammer) this.domHammer.classList.toggle('powerup--active', enabled);
+
+        // Clear any existing hammer timeout
+        if (this.hammerTimeout) {
+            clearTimeout(this.hammerTimeout);
+            this.hammerTimeout = null;
+        }
+
         // Change cursor to hammer/crosshair
         if (enabled) {
             this.input.setDefaultCursor('none');
@@ -589,6 +601,14 @@ export class GameScene extends Phaser.Scene {
             this.setAllBlocksHandCursor(false);
             // Initial state is hidden until mouse moves into canvas
             this.updateHammerPosition(this.input.activePointer.x, this.input.activePointer.y, false);
+
+            // Auto-cancel hammer mode after 10 seconds
+            this.hammerTimeout = setTimeout(() => {
+                if (this.deleteMode) {
+                    this.setDeleteMode(false);
+                    this.updateShapeVisuals();
+                }
+            }, 10000);
         } else {
             this.input.setDefaultCursor('default');
             this.setAllBlocksHandCursor(true);
@@ -710,26 +730,37 @@ export class GameScene extends Phaser.Scene {
 
     private restartGame() {
         if (this.domModal) this.domModal.classList.remove('is-visible');
-        for (let y = 0; y < GAME_CONFIG.gridSize; y++) {
-            for (let x = 0; x < GAME_CONFIG.gridSize; x++) {
-                if (this.grid[y][x]) {
-                    this.blockPool?.killAndHide(this.grid[y][x]!);
-                    this.grid[y][x] = null;
+
+        // Show interstitial ad first, then reset game after ad completes
+        const doRestart = () => {
+            for (let y = 0; y < GAME_CONFIG.gridSize; y++) {
+                for (let x = 0; x < GAME_CONFIG.gridSize; x++) {
+                    if (this.grid[y][x]) {
+                        this.blockPool?.killAndHide(this.grid[y][x]!);
+                        this.grid[y][x] = null;
+                    }
                 }
             }
-        }
-        this.activeShapes.forEach(s => {
-            s.list.forEach(c => { if (c instanceof Phaser.GameObjects.Sprite) this.blockPool?.killAndHide(c); });
-            s.destroy();
-        });
-        this.activeShapes = [];
-        this.score = 0;
-        this.isGameOver = false;
-        this.comboStreak = 0;
-        this.updateScoreUI();
-        if (this.domHighLabel) this.domHighLabel.classList.remove('record-glow');
-        this.spawnAllShapes();
-        YandexManager.getInstance().showInterstitialAd();
+            this.activeShapes.forEach(s => {
+                s.list.forEach(c => { if (c instanceof Phaser.GameObjects.Sprite) this.blockPool?.killAndHide(c); });
+                s.destroy();
+            });
+            this.activeShapes = [];
+            this.score = 0;
+            this.isGameOver = false;
+            this.comboStreak = 0;
+            this.draggedContainer = null;
+            this.setDeleteMode(false);
+            this.clearGhost();
+            this.updateScoreUI();
+            if (this.domHighLabel) this.domHighLabel.classList.remove('record-glow');
+            this.spawnAllShapes();
+        };
+
+        // Try interstitial ad, then restart regardless of result
+        YandexManager.getInstance().showInterstitialAd()
+            .then(() => doRestart())
+            .catch(() => doRestart());
     }
 
     private shareScore() {
@@ -847,6 +878,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     shutdown() {
+        // Clear hammer timeout
+        if (this.hammerTimeout) {
+            clearTimeout(this.hammerTimeout);
+            this.hammerTimeout = null;
+        }
+
         // Correctly remove all EventBus listeners
         EventBus.off(GameEvents.ACTIVATE_HAMMER);
         EventBus.off(GameEvents.ACTIVATE_SHUFFLE);
