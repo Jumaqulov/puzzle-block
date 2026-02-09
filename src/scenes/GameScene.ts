@@ -139,6 +139,8 @@ export class GameScene extends Phaser.Scene {
             if (shareBtn.parentNode) shareBtn.parentNode.replaceChild(newBtn, shareBtn);
             (newBtn as HTMLElement).onclick = () => this.shareScore();
         }
+
+        this.initSettings();
     }
 
     private drawBoard(gridWidth: number, gridHeight: number) {
@@ -761,6 +763,115 @@ export class GameScene extends Phaser.Scene {
         YandexManager.getInstance().showInterstitialAd()
             .then(() => doRestart())
             .catch(() => doRestart());
+    }
+
+    private initSettings() {
+        const sound = SoundManager.getInstance();
+        const settingsModal = document.getElementById('settings-modal');
+        const howtoModal = document.getElementById('howtoplay-modal');
+        const resetModal = document.getElementById('reset-modal');
+
+        // Settings button
+        const settingsBtn = document.getElementById('settings-btn');
+        if (settingsBtn) {
+            settingsBtn.onclick = () => {
+                if (settingsModal) settingsModal.classList.add('is-visible');
+                this.syncSettingsUI();
+            };
+        }
+
+        // Close buttons & overlays
+        const closeModal = (modal: HTMLElement | null) => {
+            if (modal) modal.classList.remove('is-visible');
+        };
+
+        document.getElementById('settings-close')?.addEventListener('click', () => closeModal(settingsModal));
+        document.getElementById('settings-overlay')?.addEventListener('click', () => closeModal(settingsModal));
+        document.getElementById('howtoplay-close')?.addEventListener('click', () => closeModal(howtoModal));
+        document.getElementById('howtoplay-overlay')?.addEventListener('click', () => closeModal(howtoModal));
+        document.getElementById('reset-overlay')?.addEventListener('click', () => closeModal(resetModal));
+
+        // Sound toggle
+        const toggleSound = document.getElementById('toggle-sound') as HTMLInputElement;
+        if (toggleSound) {
+            toggleSound.addEventListener('change', () => {
+                sound.setMuted(!toggleSound.checked);
+                this.updateSoundIcon(!toggleSound.checked);
+            });
+        }
+
+        // Vibration toggle
+        const toggleVibration = document.getElementById('toggle-vibration') as HTMLInputElement;
+        if (toggleVibration) {
+            toggleVibration.addEventListener('change', () => {
+                sound.setVibrationEnabled(toggleVibration.checked);
+                if (toggleVibration.checked) sound.vibrate(20);
+            });
+        }
+
+        // How to Play
+        document.getElementById('btn-how-to-play')?.addEventListener('click', () => {
+            closeModal(settingsModal);
+            if (howtoModal) howtoModal.classList.add('is-visible');
+        });
+
+        // Reset Progress
+        document.getElementById('btn-reset-progress')?.addEventListener('click', () => {
+            closeModal(settingsModal);
+            if (resetModal) resetModal.classList.add('is-visible');
+        });
+
+        document.getElementById('reset-cancel')?.addEventListener('click', () => {
+            closeModal(resetModal);
+        });
+
+        document.getElementById('reset-confirm')?.addEventListener('click', () => {
+            closeModal(resetModal);
+            this.resetProgress();
+        });
+
+        // Initial sync
+        this.syncSettingsUI();
+    }
+
+    private syncSettingsUI() {
+        const sound = SoundManager.getInstance();
+        const toggleSound = document.getElementById('toggle-sound') as HTMLInputElement;
+        const toggleVibration = document.getElementById('toggle-vibration') as HTMLInputElement;
+
+        if (toggleSound) toggleSound.checked = !sound.isMuted();
+        if (toggleVibration) toggleVibration.checked = sound.isVibrationEnabled();
+        this.updateSoundIcon(sound.isMuted());
+    }
+
+    private updateSoundIcon(muted: boolean) {
+        const icon = document.getElementById('sound-icon');
+        if (icon) {
+            icon.className = muted
+                ? 'ph ph-speaker-slash settings-row__icon'
+                : 'ph ph-speaker-high settings-row__icon';
+        }
+    }
+
+    private resetProgress() {
+        const i18n = LocalizationManager.getInstance();
+
+        // Reset scores
+        this.highScore = 0;
+        this.score = 0;
+        this.updateScoreUI();
+        this.updateHighScoreUI();
+
+        // Clear saved data
+        YandexManager.getInstance().clearGameData();
+
+        // Visual feedback
+        GameJuice.showFloatingText(
+            i18n.t('reset_success'),
+            this.startX + (GAME_CONFIG.gridSize * CELL_SIZE) / 2,
+            this.startY + (GAME_CONFIG.gridSize * CELL_SIZE) / 2,
+            'normal'
+        );
     }
 
     private shareScore() {

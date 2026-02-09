@@ -4,6 +4,7 @@ export class SoundManager {
     private context: AudioContext | null = null;
     private enabled: boolean = true;
     private muted: boolean = false;
+    private vibrationEnabled: boolean = true;
     private initialized: boolean = false;
     private files: Record<string, HTMLAudioElement> = {};
 
@@ -20,6 +21,10 @@ export class SoundManager {
         if (this.initialized) return;
         this.initialized = true;
 
+        // Load saved preferences
+        this.muted = localStorage.getItem('crystal_puzzle_muted') === 'true';
+        this.vibrationEnabled = localStorage.getItem('crystal_puzzle_vibration') !== 'false';
+
         this.files = {
             drag: new Audio('sounds/click.wav'),
             place: new Audio('sounds/ding.wav'),
@@ -29,6 +34,7 @@ export class SoundManager {
         Object.values(this.files).forEach((audio) => {
             audio.preload = 'auto';
             audio.volume = 0.7;
+            audio.muted = this.muted;
         });
 
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -39,7 +45,7 @@ export class SoundManager {
 
     public setMuted(muted: boolean): void {
         this.muted = muted;
-        console.log(`[Sound] Muted: ${muted}`);
+        localStorage.setItem('crystal_puzzle_muted', String(muted));
 
         Object.values(this.files).forEach((audio) => {
             audio.muted = muted;
@@ -56,6 +62,24 @@ export class SoundManager {
 
     public isMuted(): boolean {
         return this.muted;
+    }
+
+    public setVibrationEnabled(enabled: boolean): void {
+        this.vibrationEnabled = enabled;
+        localStorage.setItem('crystal_puzzle_vibration', String(enabled));
+    }
+
+    public isVibrationEnabled(): boolean {
+        return this.vibrationEnabled;
+    }
+
+    public vibrate(pattern: number | number[] = 15): void {
+        if (!this.vibrationEnabled) return;
+        try {
+            if (navigator.vibrate) {
+                navigator.vibrate(pattern);
+            }
+        } catch (_e) { /* Not supported */ }
     }
 
     public resume(): void {
@@ -109,8 +133,21 @@ export class SoundManager {
     }
 
     public play(name: string): void {
-        if (!this.enabled || this.muted) return;
+        if (!this.enabled || this.muted) {
+            // Even when muted, still vibrate for tactile feedback
+            if (name === 'place') this.vibrate(10);
+            else if (name === 'clear') this.vibrate([15, 30, 15]);
+            else if (name === 'hammer') this.vibrate([20, 40, 30]);
+            else if (name === 'gameover') this.vibrate([50, 30, 50, 30, 80]);
+            return;
+        }
         this.init();
+
+        // Vibrate on key events
+        if (name === 'place') this.vibrate(10);
+        else if (name === 'clear') this.vibrate([15, 30, 15]);
+        else if (name === 'hammer') this.vibrate([20, 40, 30]);
+        else if (name === 'gameover') this.vibrate([50, 30, 50, 30, 80]);
 
         if (this.playFile(name)) return;
 

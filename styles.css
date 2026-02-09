@@ -1459,6 +1459,344 @@ body.delete-mode #game-container canvas {
 }
 
 /* ============================================
+   SETTINGS BUTTON & MODAL
+   ============================================ */
+
+/* Settings Gear Button */
+.settings-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    font-size: 20px;
+    margin-top: 16px;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(8px);
+}
+
+.settings-btn:hover {
+    color: #ffffff;
+    border-color: rgba(188, 19, 254, 0.5);
+    box-shadow: 0 0 12px rgba(188, 19, 254, 0.3);
+    transform: rotate(30deg);
+}
+
+.settings-btn:active {
+    transform: rotate(60deg) scale(0.95);
+}
+
+/* Settings Modal Base */
+.settings-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    align-items: center;
+    justify-content: center;
+}
+
+.settings-modal.is-visible {
+    display: flex;
+    animation: settingsFadeIn 0.25s ease;
+}
+
+@keyframes settingsFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.settings-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 2, 18, 0.75);
+    backdrop-filter: blur(8px);
+}
+
+.settings-modal__panel {
+    position: relative;
+    z-index: 1;
+    width: 320px;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    background: linear-gradient(165deg, #1a0c2e 0%, #0F051D 100%);
+    border: 1px solid rgba(188, 19, 254, 0.25);
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(188, 19, 254, 0.15);
+    animation: settingsSlideUp 0.3s ease;
+}
+
+.settings-modal__panel--small {
+    width: 280px;
+}
+
+@keyframes settingsSlideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Header */
+.settings-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.settings-modal__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: #ffffff;
+}
+
+.settings-modal__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.15s ease;
+}
+
+.settings-modal__close:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+
+/* Body */
+.settings-modal__body {
+    padding: 16px 20px;
+}
+
+/* Settings Row */
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+}
+
+.settings-row__info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.settings-row__icon {
+    font-size: 20px;
+    color: var(--cyan);
+    width: 24px;
+    text-align: center;
+}
+
+.settings-row__label {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    width: 46px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 26px;
+    transition: all 0.25s ease;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: #ffffff;
+    border-radius: 50%;
+    transition: transform 0.25s ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-switch input:checked+.toggle-slider {
+    background: var(--glow);
+    box-shadow: 0 0 10px rgba(188, 19, 254, 0.4);
+}
+
+.toggle-switch input:checked+.toggle-slider::before {
+    transform: translateX(20px);
+}
+
+/* Divider */
+.settings-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 8px 0;
+}
+
+/* Action Buttons */
+.settings-action {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 0;
+    border: none;
+    background: none;
+    color: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 14px;
+    text-align: left;
+    transition: color 0.15s ease;
+}
+
+.settings-action:hover {
+    color: #ffffff;
+}
+
+.settings-action__arrow {
+    margin-left: auto;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.settings-action--danger:hover {
+    color: #ff4466;
+}
+
+.settings-action--danger:hover .settings-row__icon {
+    color: #ff4466;
+}
+
+/* Footer */
+.settings-modal__footer {
+    padding: 10px 20px 16px;
+    text-align: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-version {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.25);
+    letter-spacing: 0.5px;
+}
+
+/* Actions (Reset Confirm) */
+.settings-modal__actions {
+    display: flex;
+    gap: 10px;
+    padding: 4px 20px 20px;
+}
+
+.settings-btn-action {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.15s ease;
+}
+
+.settings-btn-action--cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.settings-btn-action--cancel:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.settings-btn-action--confirm {
+    background: #ff4466;
+    color: #ffffff;
+}
+
+.settings-btn-action--confirm:hover {
+    background: #ff2244;
+    box-shadow: 0 0 14px rgba(255, 68, 102, 0.4);
+}
+
+/* Reset Warning Text */
+.reset-warning {
+    margin: 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.5;
+}
+
+/* How to Play Steps */
+.howto-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.howto-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.howto-step__icon {
+    font-size: 22px;
+    flex-shrink: 0;
+    width: 32px;
+    text-align: center;
+}
+
+.howto-step__text {
+    margin: 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.5;
+}
+
+/* ============================================
    LANDSCAPE ORIENTATION WARNING & BLOCKING
    ============================================ */
 

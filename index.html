@@ -22,9 +22,13 @@
             height: 100%;
         }
 
-        .landscape-warning,
-        .share-modal {
+        .landscape-warning {
             display: none !important;
+        }
+
+        .share-modal,
+        .settings-modal {
+            display: none;
         }
 
         .hammer-cursor {
@@ -182,6 +186,9 @@
                 <div class="side-hud__label" data-i18n="score_label">Ochko</div>
                 <div class="side-hud__value side-hud__value--score" id="score-value">0</div>
             </div>
+            <button class="settings-btn" id="settings-btn" type="button" aria-label="Settings">
+                <i class="ph ph-gear-six"></i>
+            </button>
         </div>
         <div id="game-container">
             <div class="tutorial-hand" id="hand-tutorial" aria-hidden="true">
@@ -203,6 +210,121 @@
                 <span class="powerup__label" data-i18n="shuffle_tool">Aralashtirish</span>
                 <span class="ad-badge">AD</span>
             </button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="settings-modal" id="settings-modal">
+        <div class="settings-modal__overlay" id="settings-overlay"></div>
+        <div class="settings-modal__panel">
+            <div class="settings-modal__header">
+                <h2 class="settings-modal__title" data-i18n="settings_title">Sozlamalar</h2>
+                <button class="settings-modal__close" id="settings-close">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+
+            <div class="settings-modal__body">
+                <!-- Sound Toggle -->
+                <div class="settings-row">
+                    <div class="settings-row__info">
+                        <i class="ph ph-speaker-high settings-row__icon" id="sound-icon"></i>
+                        <span class="settings-row__label" data-i18n="settings_sound">Ovoz</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-sound" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <!-- Vibration Toggle -->
+                <div class="settings-row">
+                    <div class="settings-row__info">
+                        <i class="ph ph-vibrate settings-row__icon"></i>
+                        <span class="settings-row__label" data-i18n="settings_vibration">Tebranish</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-vibration" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <!-- Divider -->
+                <div class="settings-divider"></div>
+
+                <!-- How to Play -->
+                <button class="settings-action" id="btn-how-to-play">
+                    <i class="ph ph-question settings-row__icon"></i>
+                    <span data-i18n="settings_how_to_play">Qanday o'ynaladi?</span>
+                    <i class="ph ph-caret-right settings-action__arrow"></i>
+                </button>
+
+                <!-- Reset Progress -->
+                <button class="settings-action settings-action--danger" id="btn-reset-progress">
+                    <i class="ph ph-trash settings-row__icon"></i>
+                    <span data-i18n="settings_reset">Progressni tozalash</span>
+                    <i class="ph ph-caret-right settings-action__arrow"></i>
+                </button>
+            </div>
+
+            <div class="settings-modal__footer">
+                <span class="settings-version">Crystal Puzzle v1.0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- How to Play Modal -->
+    <div class="settings-modal" id="howtoplay-modal">
+        <div class="settings-modal__overlay" id="howtoplay-overlay"></div>
+        <div class="settings-modal__panel">
+            <div class="settings-modal__header">
+                <h2 class="settings-modal__title" data-i18n="howto_title">Qanday o'ynaladi?</h2>
+                <button class="settings-modal__close" id="howtoplay-close">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="settings-modal__body howto-body">
+                <div class="howto-step">
+                    <div class="howto-step__icon">🎯</div>
+                    <p class="howto-step__text" data-i18n="howto_step1">Shakllarni sudrab o'yin maydoniga joylashtiring
+                    </p>
+                </div>
+                <div class="howto-step">
+                    <div class="howto-step__icon">✨</div>
+                    <p class="howto-step__text" data-i18n="howto_step2">To'liq qator yoki ustunni to'ldiring — u
+                        avtomatik tozalanadi</p>
+                </div>
+                <div class="howto-step">
+                    <div class="howto-step__icon">🔥</div>
+                    <p class="howto-step__text" data-i18n="howto_step3">Ketma-ket tozalash combo beradi va ko'proq ochko
+                        olasiz</p>
+                </div>
+                <div class="howto-step">
+                    <div class="howto-step__icon">🔨</div>
+                    <p class="howto-step__text" data-i18n="howto_step4">Bolg'a 3×3 maydonni tozalaydi, Aralashtirish esa
+                        yangi shakllar beradi</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Confirmation Modal -->
+    <div class="settings-modal" id="reset-modal">
+        <div class="settings-modal__overlay" id="reset-overlay"></div>
+        <div class="settings-modal__panel settings-modal__panel--small">
+            <div class="settings-modal__header">
+                <h2 class="settings-modal__title" data-i18n="reset_confirm_title">Ishonchingiz komilmi?</h2>
+            </div>
+            <div class="settings-modal__body">
+                <p class="reset-warning" data-i18n="reset_confirm_text">Barcha rekordlar va saqlangan ma'lumotlar o'chib
+                    ketadi. Bu amalni qaytarib bo'lmaydi.</p>
+            </div>
+            <div class="settings-modal__actions">
+                <button class="settings-btn-action settings-btn-action--cancel" id="reset-cancel"
+                    data-i18n="reset_cancel">Bekor qilish</button>
+                <button class="settings-btn-action settings-btn-action--confirm" id="reset-confirm"
+                    data-i18n="reset_confirm">Tozalash</button>
+            </div>
         </div>
     </div>
 

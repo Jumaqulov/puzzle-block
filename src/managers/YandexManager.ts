@@ -316,4 +316,16 @@ export class YandexManager {
         await this.saveHighScore(newHighScore);
         await this.submitScore(score);
     }
+
+    public async clearGameData(): Promise<void> {
+        try {
+            localStorage.removeItem('crystal_puzzle_data');
+        } catch (_e) { }
+
+        if (this.player && this.isAuthorized) {
+            try {
+                await this.player.setData({ highScore: 0 }, true);
+            } catch (_e) { }
+        }
+    }
 }

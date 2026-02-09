@@ -30,7 +30,22 @@ export class LocalizationManager {
             share_title: 'Crystal Puzzle - Block Puzzle Game',
             share_modal_title: 'Share!',
             copy_link: 'Copy Link',
-            instagram_note: 'Instagram sharing: Paste the copied link in your Instagram bio or story!'
+            instagram_note: 'Instagram sharing: Paste the copied link in your Instagram bio or story!',
+            settings_title: 'Settings',
+            settings_sound: 'Sound',
+            settings_vibration: 'Vibration',
+            settings_how_to_play: 'How to Play?',
+            settings_reset: 'Reset Progress',
+            howto_title: 'How to Play?',
+            howto_step1: 'Drag shapes onto the game board',
+            howto_step2: 'Fill a complete row or column — it clears automatically',
+            howto_step3: 'Clear lines consecutively for combo bonuses and more points',
+            howto_step4: 'Hammer clears a 3×3 area, Shuffle gives you new shapes',
+            reset_confirm_title: 'Are you sure?',
+            reset_confirm_text: 'All records and saved data will be deleted. This action cannot be undone.',
+            reset_cancel: 'Cancel',
+            reset_confirm: 'Reset',
+            reset_success: 'Progress has been reset'
         },
         ru: {
             game_title: 'КРИСТАЛЛ ПАЗЛ',
@@ -55,7 +70,22 @@ export class LocalizationManager {
             share_title: 'Crystal Puzzle - Блок головоломка',
             share_modal_title: 'Поделиться!',
             copy_link: 'Скопировать ссылку',
-            instagram_note: 'Делитесь через Instagram: Вставьте скопированную ссылку в био или историю Instagram!'
+            instagram_note: 'Делитесь через Instagram: Вставьте скопированную ссылку в био или историю Instagram!',
+            settings_title: 'Настройки',
+            settings_sound: 'Звук',
+            settings_vibration: 'Вибрация',
+            settings_how_to_play: 'Как играть?',
+            settings_reset: 'Сбросить прогресс',
+            howto_title: 'Как играть?',
+            howto_step1: 'Перетащите фигуры на игровое поле',
+            howto_step2: 'Заполните полный ряд или столбец — он очистится автоматически',
+            howto_step3: 'Очищайте линии подряд для комбо-бонусов и больше очков',
+            howto_step4: 'Молоток очищает область 3×3, Перемешать даёт новые фигуры',
+            reset_confirm_title: 'Вы уверены?',
+            reset_confirm_text: 'Все рекорды и сохранённые данные будут удалены. Это действие необратимо.',
+            reset_cancel: 'Отмена',
+            reset_confirm: 'Сбросить',
+            reset_success: 'Прогресс сброшен'
         },
         uz: {
             game_title: 'KRISTAL PAZL',
@@ -80,7 +110,22 @@ export class LocalizationManager {
             share_title: 'Crystal Puzzle - Blok Boshqotirma',
             share_modal_title: 'Ulashing!',
             copy_link: 'Linkni nusxalash',
-            instagram_note: "Instagram orqali ulashing: Nusxalangan linkni Instagram bio yoki story'ga joylashtiring!"
+            instagram_note: "Instagram orqali ulashing: Nusxalangan linkni Instagram bio yoki story'ga joylashtiring!",
+            settings_title: 'Sozlamalar',
+            settings_sound: 'Ovoz',
+            settings_vibration: 'Tebranish',
+            settings_how_to_play: "Qanday o'ynaladi?",
+            settings_reset: 'Progressni tozalash',
+            howto_title: "Qanday o'ynaladi?",
+            howto_step1: "Shakllarni sudrab o'yin maydoniga joylashtiring",
+            howto_step2: "To'liq qator yoki ustunni to'ldiring — u avtomatik tozalanadi",
+            howto_step3: "Ketma-ket tozalash combo beradi va ko'proq ochko olasiz",
+            howto_step4: "Bolg'a 3×3 maydonni tozalaydi, Aralashtirish esa yangi shakllar beradi",
+            reset_confirm_title: 'Ishonchingiz komilmi?',
+            reset_confirm_text: "Barcha rekordlar va saqlangan ma'lumotlar o'chib ketadi. Bu amalni qaytarib bo'lmaydi.",
+            reset_cancel: 'Bekor qilish',
+            reset_confirm: 'Tozalash',
+            reset_success: 'Progress tozalandi'
         }
     };
 
