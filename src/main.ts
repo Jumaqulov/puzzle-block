@@ -45,6 +45,28 @@ async function initializeApp() {
     window.addEventListener('selectstart', (e) => e.preventDefault());
     window.addEventListener('dragstart', (e) => e.preventDefault());
 
+    // Prevent pull-to-refresh / swipe-to-refresh on iOS and Android (п. 1.10.2)
+    document.addEventListener('touchmove', (e) => {
+        // Allow scroll inside settings/howto modals if content overflows
+        const target = e.target as HTMLElement;
+        if (target.closest('.settings-modal__body')) return;
+        e.preventDefault();
+    }, { passive: false });
+
+    // Prevent scroll on body
+    document.body.addEventListener('scroll', (e) => {
+        e.preventDefault();
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+    }, { passive: false });
+
+    // iOS Safari: prevent overscroll bounce
+    document.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 1) {
+            e.preventDefault(); // Prevent pinch-to-zoom
+        }
+    }, { passive: false });
+
     // Try to lock screen to portrait mode
     try {
         if (screen.orientation && (screen.orientation as any).lock) {
