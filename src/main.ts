@@ -63,6 +63,21 @@ async function initializeApp() {
     // Start Phaser
     window.game = new Phaser.Game(config);
 
+    // Force Phaser to recalculate scale on orientation change
+    const handleResize = () => {
+        // Small delay to let CSS layout settle before Phaser recalculates
+        setTimeout(() => {
+            const g = window.game;
+            if (g && g.scale) {
+                g.scale.refresh();
+            }
+        }, 150);
+    };
+
+    window.addEventListener('orientationchange', handleResize);
+    screen.orientation?.addEventListener('change', handleResize);
+    window.addEventListener('resize', handleResize);
+
     // Localization uses Yandex for language detection, so it's init inside BootScene using singleton
 }
 

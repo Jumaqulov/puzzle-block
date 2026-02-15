@@ -22,6 +22,11 @@
             height: 100%;
         }
 
+        /* Prevent canvas deformation on any orientation change */
+        canvas {
+            object-fit: contain !important;
+        }
+
         .landscape-warning {
             display: none !important;
         }

@@ -1456,6 +1456,8 @@ body.delete-mode #game-container canvas {
     display: block;
     /* Canvas size is handled by Phaser Scale Manager */
     box-shadow: 0 0 50px rgba(188, 19, 254, 0.2);
+    /* Prevent disproportional stretching on any orientation */
+    object-fit: contain;
 }
 
 /* ============================================
@@ -2002,6 +2004,17 @@ body.delete-mode #game-container canvas {
         width: calc((100vh - 8px) * 0.643) !important;
         max-width: calc(100vw - 140px) !important;
         max-height: calc(100vh - 8px) !important;
+        padding: 4px !important;
+    }
+
+    /* CRITICAL: Reset canvas rules that cause deformation in landscape */
+    #game-container canvas {
+        width: auto !important;
+        height: auto !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        aspect-ratio: auto !important;
+        object-fit: contain !important;
     }
 
     /* Powerups — compact right column, vertically centered */
