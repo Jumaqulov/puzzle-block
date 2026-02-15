@@ -33,36 +33,14 @@ export class YandexManager {
         return YandexManager.instance;
     }
 
-    private isYandexEnvironment(): boolean {
-        if (typeof window === 'undefined') return false;
-        if ((window as any).YandexGamesSDKEnvironment) return true;
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('app-id') || urlParams.has('draft')) return true;
-        if (window.location.hostname.includes('yandex')) return true;
-        return false;
-    }
-
-    private loadSDKScript(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'https://yandex.ru/games/sdk/v2';
-            script.async = true;
-            script.onload = () => resolve();
-            script.onerror = (e) => reject(e);
-            document.head.appendChild(script);
-        });
-    }
-
     public async init(): Promise<boolean> {
-        if (!this.isYandexEnvironment()) {
-            console.log('[YaSDK] Local development mode - SDK disabled');
-            this.initFallbackMode();
-            return false;
-        }
-
         try {
+            // Endi SDK to'g'ridan-to'g'ri HTML dan keladi. 
+            // Agar HTML da script bo'lmasa, demak lokal (dev) muhitdamiz.
             if (typeof YaGames === 'undefined') {
-                await this.loadSDKScript();
+                console.log('[YaSDK] Local development mode - YaGames topilmadi');
+                this.initFallbackMode();
+                return false;
             }
 
             this.ysdk = await YaGames.init();
