@@ -143,13 +143,6 @@ export class GameScene extends Phaser.Scene {
             newBtn.addEventListener('click', () => this.restartGame());
         }
 
-        const shareBtn = document.getElementById('share-score');
-        if (shareBtn) {
-            const newBtn = shareBtn.cloneNode(true);
-            if (shareBtn.parentNode) shareBtn.parentNode.replaceChild(newBtn, shareBtn);
-            (newBtn as HTMLElement).onclick = () => this.shareScore();
-        }
-
         this.initSettings();
     }
 
@@ -1146,78 +1139,6 @@ export class GameScene extends Phaser.Scene {
             this.startY + (GAME_CONFIG.gridSize * CELL_SIZE) / 2,
             'normal'
         );
-    }
-
-    private shareScore() {
-        const modal = document.getElementById('share-modal');
-        if (!modal) return;
-
-        const i18n = LocalizationManager.getInstance();
-        const scoreEl = document.getElementById('share-modal-score');
-        const msgEl = document.getElementById('share-modal-message');
-        const shareText = i18n.t('share_message').replace('{score}', String(this.score));
-        const shareTitle = i18n.t('share_title');
-        const gameUrl = window.location.href;
-
-        if (scoreEl) scoreEl.textContent = String(this.score);
-        if (msgEl) msgEl.textContent = shareText;
-
-        modal.classList.add('is-visible');
-
-        // Close button
-        const close = document.getElementById('share-modal-close');
-        if (close) close.onclick = () => modal.classList.remove('is-visible');
-
-        // Overlay click to close
-        const overlay = modal.querySelector('.share-modal__overlay') as HTMLElement;
-        if (overlay) overlay.onclick = () => modal.classList.remove('is-visible');
-
-        // Share button handlers
-        const shareButtons = modal.querySelectorAll('[data-share]');
-        shareButtons.forEach(btn => {
-            const el = btn as HTMLElement;
-            const type = el.getAttribute('data-share');
-
-            el.onclick = () => {
-                const encodedText = encodeURIComponent(shareText);
-                const encodedUrl = encodeURIComponent(gameUrl);
-                const encodedTitle = encodeURIComponent(shareTitle);
-
-                switch (type) {
-                    case 'telegram':
-                        window.open(`https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`, '_blank');
-                        break;
-
-                    case 'whatsapp':
-                        window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank');
-                        break;
-
-                    case 'x':
-                        window.open(`https://x.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, '_blank');
-                        break;
-
-                    case 'copy':
-                        navigator.clipboard.writeText(`${shareText}\n${gameUrl}`).then(() => {
-                            const label = el.querySelector('span[data-i18n]');
-                            if (label) {
-                                const original = label.textContent;
-                                label.textContent = i18n.t('copied_to_clipboard');
-                                setTimeout(() => { label.textContent = original; }, 2000);
-                            }
-                        }).catch(() => {
-                            const label = el.querySelector('span[data-i18n]');
-                            if (label) {
-                                const original = label.textContent;
-                                label.textContent = i18n.t('copy_failed');
-                                setTimeout(() => { label.textContent = original; }, 2000);
-                            }
-                        });
-                        return; // Don't close modal on copy
-                }
-
-                modal.classList.remove('is-visible');
-            };
-        });
     }
 
     private checkTutorial() {
