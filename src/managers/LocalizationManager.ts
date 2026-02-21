@@ -8,7 +8,7 @@ export class LocalizationManager {
 
     private translations: Record<Language, Record<string, string>> = {
         en: {
-            game_title: 'CRYSTAL PUZZLE',
+            game_title: 'Crystal Puzzle',
             loading: 'Loading...',
             score_label: 'Score',
             record_label: 'Record',
@@ -49,7 +49,7 @@ export class LocalizationManager {
             no_blocks: 'No blocks!'
         },
         ru: {
-            game_title: 'КРИСТАЛЛ ПАЗЛ',
+            game_title: 'Кристальный Пазл',
             loading: 'Загрузка...',
             score_label: 'Счёт',
             record_label: 'Рекорд',
@@ -67,8 +67,8 @@ export class LocalizationManager {
             copied_to_clipboard: 'Скопировано!',
             copy_failed: 'Не удалось скопировать',
             share_not_supported: 'Функция не поддерживается',
-            share_message: 'Я набрал {score} очков в Crystal Puzzle! Попробуй и ты!',
-            share_title: 'Crystal Puzzle - Блок головоломка',
+            share_message: 'Я набрал {score} очков в Кристальный Пазл! Попробуй и ты!',
+            share_title: 'Кристальный Пазл - Блок головоломка',
             share_modal_title: 'Поделиться!',
             copy_link: 'Скопировать ссылку',
             instagram_note: 'Делитесь через Instagram: Вставьте скопированную ссылку в био или историю Instagram!',
@@ -90,7 +90,7 @@ export class LocalizationManager {
             no_blocks: 'Нет блоков!'
         },
         uz: {
-            game_title: 'KRISTAL PAZL',
+            game_title: 'Crystal Puzzle',
             loading: 'Yuklanmoqda...',
             score_label: 'Ochko',
             record_label: 'Rekord',
