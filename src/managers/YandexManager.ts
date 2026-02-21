@@ -113,9 +113,29 @@ export class YandexManager {
 
         if (this.isAdShowing) return false;
 
+        // Safety timeout — if ad callbacks don't fire within 30s, force recovery
+        let safetyTimer: ReturnType<typeof setTimeout> | null = null;
+
         return new Promise<boolean>((resolve) => {
             this.isAdShowing = true;
             let rewarded = false;
+            let closed = false;
+
+            const cleanup = () => {
+                if (closed) return;
+                closed = true;
+                this.isAdShowing = false;
+                SoundManager.getInstance().setMuted(false);
+                if (window.game && window.game.loop) window.game.loop.wake();
+                if (this.callbacks.onAdClose) this.callbacks.onAdClose();
+                if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
+            };
+
+            safetyTimer = setTimeout(() => {
+                console.warn('[YaSDK] Ad safety timeout — forcing recovery');
+                cleanup();
+                resolve(false);
+            }, 30000);
 
             this.ysdk!.adv.showRewardedVideo({
                 callbacks: {
@@ -125,16 +145,9 @@ export class YandexManager {
                         if (this.callbacks.onAdOpen) this.callbacks.onAdOpen();
                     },
                     onClose: () => {
-                        this.isAdShowing = false;
-                        SoundManager.getInstance().setMuted(false);
-                        if (window.game && window.game.loop) window.game.loop.wake();
-                        if (this.callbacks.onAdClose) this.callbacks.onAdClose();
-
-                        // Grant reward AFTER game loop is awake
+                        cleanup();
                         if (rewarded) {
-                            setTimeout(() => {
-                                this.grantReward(rewardType);
-                            }, 100);
+                            setTimeout(() => this.grantReward(rewardType), 100);
                         }
                         resolve(rewarded);
                     },
@@ -147,19 +160,18 @@ export class YandexManager {
                         }
                     },
                     onError: (e: any) => {
-                        this.isAdShowing = false;
-                        SoundManager.getInstance().setMuted(false);
-                        if (window.game && window.game.loop) window.game.loop.wake();
+                        cleanup();
                         console.error('Ad Error', e);
-                        alert("Reklama yuklanmadi. Internetni tekshiring!");
+                        // Non-blocking notification instead of alert()
+                        this.showToast("Reklama yuklanmadi");
                         resolve(false);
                     }
                 }
             });
         }).catch((err) => {
             this.isAdShowing = false;
+            if (window.game && window.game.loop) window.game.loop.wake();
             console.error('Ad Exception', err);
-            alert("Reklama yuklanmadi. Internetni tekshiring!");
             return false;
         });
     }
@@ -178,8 +190,27 @@ export class YandexManager {
     public async showInterstitialAd(): Promise<boolean> {
         if (!this.ysdk || this.isAdShowing) return false;
 
+        let safetyTimer: ReturnType<typeof setTimeout> | null = null;
+
         return new Promise<boolean>((resolve) => {
             this.isAdShowing = true;
+            let closed = false;
+
+            const cleanup = () => {
+                if (closed) return;
+                closed = true;
+                this.isAdShowing = false;
+                SoundManager.getInstance().setMuted(false);
+                if (window.game && window.game.loop) window.game.loop.wake();
+                if (this.callbacks.onAdClose) this.callbacks.onAdClose();
+                if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
+            };
+
+            safetyTimer = setTimeout(() => {
+                console.warn('[YaSDK] Interstitial safety timeout — forcing recovery');
+                cleanup();
+                resolve(false);
+            }, 30000);
 
             this.ysdk!.adv.showFullscreenAdv({
                 callbacks: {
@@ -189,30 +220,39 @@ export class YandexManager {
                         if (this.callbacks.onAdOpen) this.callbacks.onAdOpen();
                     },
                     onClose: (wasShown: boolean) => {
-                        this.isAdShowing = false;
-                        SoundManager.getInstance().setMuted(false);
-                        if (window.game && window.game.loop) window.game.loop.wake();
-                        if (this.callbacks.onAdClose) this.callbacks.onAdClose();
+                        cleanup();
                         resolve(wasShown);
                     },
                     onError: (_e: any) => {
-                        this.isAdShowing = false;
-                        SoundManager.getInstance().setMuted(false);
-                        if (window.game && window.game.loop) window.game.loop.wake();
+                        cleanup();
                         resolve(false);
                     },
                     onOffline: () => {
-                        this.isAdShowing = false;
-                        SoundManager.getInstance().setMuted(false);
-                        if (window.game && window.game.loop) window.game.loop.wake();
+                        cleanup();
                         resolve(false);
                     }
                 }
             });
         }).catch(() => {
             this.isAdShowing = false;
+            if (window.game && window.game.loop) window.game.loop.wake();
             return false;
         });
+    }
+
+    // Non-blocking toast notification instead of alert()
+    private showToast(message: string): void {
+        const toast = document.createElement('div');
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(255,68,68,0.9); color: #fff; padding: 8px 20px;
+            border-radius: 8px; font-size: 13px; z-index: 10000;
+            font-family: 'Noto Sans', sans-serif; pointer-events: none;
+            animation: floatUp 2s ease-out forwards;
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
     }
 
     // --- Score Integrity ---

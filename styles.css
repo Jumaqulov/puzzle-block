@@ -715,6 +715,58 @@ html[lang="ru"] .btn {
 
     .cosmic-dust {
         opacity: 0.3;
+        animation: none;
+        /* Stop animation on mobile */
+    }
+
+    /* === MOBILE PERFORMANCE: remove expensive GPU effects === */
+    .nebula-layer {
+        will-change: auto !important;
+        /* Release GPU layers */
+        animation-duration: 200s !important;
+        /* Slow down dramatically */
+    }
+
+    .nebula-layer--mid {
+        opacity: 0.4;
+    }
+
+    /* Remove ALL backdrop-filter on mobile — huge GPU cost */
+    .powerups,
+    .modal__content,
+    .modal__close,
+    .share-modal__content,
+    .settings-modal__content,
+    .game-over-dialog,
+    #game-container canvas {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    /* Simplify particle effects on mobile */
+    .crystal-particle {
+        will-change: auto !important;
+        width: 8px !important;
+        height: 8px !important;
+    }
+
+    .crystal-particle::before,
+    .crystal-particle::after {
+        display: none !important;
+        /* Remove pseudo-elements for particles */
+    }
+
+    .floating-text {
+        will-change: auto !important;
+    }
+
+    /* Simplify box-shadows on mobile */
+    #game-container {
+        box-shadow: 0 0 15px rgba(188, 19, 254, 0.2) !important;
+    }
+
+    #game-container canvas {
+        box-shadow: none !important;
     }
 
     #game-container canvas {

@@ -2,7 +2,6 @@ import { CELL_SIZE } from '../consts';
 import { SoundManager } from '../managers/SoundManager';
 
 export class GameJuice {
-    // Texture key -> color mapping
     private static colorMap: Record<string, string> = {
         'crystal_red': '#FF0055',
         'crystal_blue': '#00D4FF',
@@ -11,17 +10,39 @@ export class GameJuice {
         'crystal_yellow': '#FFD700'
     };
 
-    /**
-     * Get color hex from texture key
-     */
+    // Particle pool to avoid excessive DOM creation
+    private static particlePool: HTMLDivElement[] = [];
+    private static activeParticles: number = 0;
+    private static readonly MAX_PARTICLES = 30; // Hard limit
+
     public static getColor(textureKey: string): string {
         return this.colorMap[textureKey] || '#FFFFFF';
     }
 
-    /**
-     * Create particle explosion at coordinates
-     */
-    public static createExplosion(x: number, y: number, color: string, particleCount: number = 10): void {
+    private static getParticle(): HTMLDivElement | null {
+        // Hard limit to prevent lag
+        if (this.activeParticles >= this.MAX_PARTICLES) return null;
+
+        let particle: HTMLDivElement;
+        if (this.particlePool.length > 0) {
+            particle = this.particlePool.pop()!;
+        } else {
+            particle = document.createElement('div');
+            particle.className = 'crystal-particle';
+        }
+        this.activeParticles++;
+        return particle;
+    }
+
+    private static releaseParticle(particle: HTMLDivElement): void {
+        particle.remove();
+        this.activeParticles--;
+        if (this.particlePool.length < 20) {
+            this.particlePool.push(particle);
+        }
+    }
+
+    public static createExplosion(x: number, y: number, color: string, particleCount: number = 6): void {
         const container = document.getElementById('game-container');
         if (!container) return;
 
@@ -29,38 +50,35 @@ export class GameJuice {
         const baseX = rect.left + x;
         const baseY = rect.top + y;
 
-        for (let i = 0; i < particleCount; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'crystal-particle';
+        // Limit actual particles created
+        const count = Math.min(particleCount, this.MAX_PARTICLES - this.activeParticles, 6);
 
-            // Random direction and distance
-            const angle = (Math.PI * 2 * i / particleCount) + (Math.random() - 0.5) * 0.8;
-            const distance = 40 + Math.random() * 60;
+        for (let i = 0; i < count; i++) {
+            const particle = this.getParticle();
+            if (!particle) break;
+
+            const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.8;
+            const distance = 30 + Math.random() * 40;
             const tx = Math.cos(angle) * distance;
-            const ty = Math.sin(angle) * distance - 20; // Slight upward bias
-            const rotation = (Math.random() - 0.5) * 360;
+            const ty = Math.sin(angle) * distance - 15;
 
             particle.style.cssText = `
                 left: ${baseX}px;
                 top: ${baseY}px;
                 background: ${color};
-                box-shadow: 0 0 8px ${color}, 0 0 15px ${color}80;
                 --tx: ${tx}px;
                 --ty: ${ty}px;
-                --rot: ${rotation}deg;
-                animation: particleExplode ${0.5 + Math.random() * 0.2}s ease-out forwards;
+                --rot: ${((Math.random() - 0.5) * 200)}deg;
+                animation: particleExplode 0.45s ease-out forwards;
             `;
 
             document.body.appendChild(particle);
 
-            // Cleanup
-            setTimeout(() => particle.remove(), 800);
+            const p = particle;
+            setTimeout(() => this.releaseParticle(p), 500);
         }
     }
 
-    /**
-     * Show floating text for scores or feedback
-     */
     public static showFloatingText(text: string, x: number, y: number, type: 'normal' | 'combo' | 'excellent' = 'normal'): void {
         const container = document.getElementById('game-container');
         if (!container) return;
@@ -80,35 +98,21 @@ export class GameJuice {
         floatingText.style.top = `${rect.top + y}px`;
 
         document.body.appendChild(floatingText);
-
         setTimeout(() => floatingText.remove(), 1100);
     }
 
-    /**
-     * Shake the screen with varying intensity
-     */
     public static shakeScreen(intensity: 'light' | 'medium' | 'heavy' = 'light'): void {
         const gameShell = document.querySelector('.game-shell') as HTMLElement;
         if (!gameShell) return;
 
-        // Remove existing shake classes
         gameShell.classList.remove('shake-light', 'shake-medium', 'shake-heavy');
-
-        // Force reflow
         void gameShell.offsetWidth;
-
-        // Add shake class
         gameShell.classList.add(`shake-${intensity}`);
 
         const duration = intensity === 'heavy' ? 400 : intensity === 'medium' ? 350 : 300;
-        setTimeout(() => {
-            gameShell.classList.remove(`shake-${intensity}`);
-        }, duration);
+        setTimeout(() => gameShell.classList.remove(`shake-${intensity}`), duration);
     }
 
-    /**
-     * Pulse score effect
-     */
     public static pulseScore(): void {
         const scoreEl = document.getElementById('score-value');
         if (!scoreEl) return;
@@ -116,13 +120,9 @@ export class GameJuice {
         scoreEl.classList.remove('pulse');
         void scoreEl.offsetWidth;
         scoreEl.classList.add('pulse');
-
         setTimeout(() => scoreEl.classList.remove('pulse'), 400);
     }
 
-    /**
-     * Flash line effect using DOM overlay
-     */
     public static flashLineDOM(x: number, y: number, width: number, height: number, isHorizontal: boolean = true): void {
         const container = document.getElementById('game-container');
         if (!container) return;
@@ -150,7 +150,8 @@ export class GameJuice {
         const worldX = startX + gridX * CELL_SIZE + CELL_SIZE / 2;
         const worldY = startY + gridY * CELL_SIZE + CELL_SIZE / 2;
 
-        this.createExplosion(worldX, worldY, color, 8);
+        // Reduced from 8 to 4 particles per block
+        this.createExplosion(worldX, worldY, color, 4);
     }
 
     public static onLineClear(linesCleared: number, comboStreak: number, centerX: number, centerY: number): void {
@@ -180,20 +181,7 @@ export class GameJuice {
         shockwave.style.top = `${rect.top + y}px`;
         document.body.appendChild(shockwave);
 
-        const flash = document.createElement('div');
-        flash.className = 'hammer-flash';
-        flash.style.cssText = `
-            left: ${rect.left + x - 150}px;
-            top: ${rect.top + y - 150}px;
-            width: 300px;
-            height: 300px;
-        `;
-        document.body.appendChild(flash);
-
-        setTimeout(() => {
-            shockwave.remove();
-            flash.remove();
-        }, 600);
+        setTimeout(() => shockwave.remove(), 600);
     }
 
     public static playHammerSound(): void {
@@ -201,11 +189,13 @@ export class GameJuice {
     }
 
     public static createStaggeredExplosions(cells: { x: number, y: number, color: string }[], startX: number, startY: number, delayBetween: number = 30): void {
-        cells.forEach((cell, index) => {
+        // Limit to avoid particle spam
+        const limited = cells.slice(0, 6);
+        limited.forEach((cell, index) => {
             setTimeout(() => {
                 const worldX = startX + cell.x * CELL_SIZE + CELL_SIZE / 2;
                 const worldY = startY + cell.y * CELL_SIZE + CELL_SIZE / 2;
-                this.createExplosion(worldX, worldY, cell.color, 10);
+                this.createExplosion(worldX, worldY, cell.color, 4);
             }, index * delayBetween);
         });
     }
