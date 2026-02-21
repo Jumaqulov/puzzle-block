@@ -38,8 +38,10 @@ export class YandexManager {
         try {
             // Endi SDK to'g'ridan-to'g'ri HTML dan keladi. 
             // Agar HTML da script bo'lmasa, demak lokal (dev) muhitdamiz.
-            if (typeof YaGames === 'undefined') {
-                console.log('[YaSDK] Local development mode - YaGames topilmadi');
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+            if (typeof YaGames === 'undefined' || isLocalhost) {
+                console.log('[YaSDK] Local development mode detected - YaGames topilmadi yoki localhost');
                 this.initFallbackMode();
                 return false;
             }
