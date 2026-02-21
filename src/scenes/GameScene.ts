@@ -95,8 +95,18 @@ export class GameScene extends Phaser.Scene {
         // Load High Score
         this.loadHighScore();
 
-        // Spawn Shapes
-        this.spawnAllShapes();
+        // Setup Yandex cloud state restore (async fallback)
+        this.setupYandexStateRestore();
+
+        // Try to restore saved game state (п. 1.9)
+        const restored = this.loadGameState();
+        if (!restored) {
+            // No saved state — start fresh
+            this.spawnAllShapes();
+        }
+
+        // Auto-save on page hide/refresh
+        this.initAutoSave();
 
         // Tutorial
         this.checkTutorial();
@@ -323,6 +333,7 @@ export class GameScene extends Phaser.Scene {
 
             if (this.activeShapes.length === 0) this.spawnAllShapes();
             this.checkGameOver();
+            this.saveGameState(); // Auto-save after placement
         });
     }
 
@@ -525,6 +536,7 @@ export class GameScene extends Phaser.Scene {
             SoundManager.getInstance().play('gameover');
             YandexManager.getInstance().onGameOver(this.score, this.highScore);
             if (this.domModal) this.domModal.classList.add('is-visible');
+            this.saveGameState(); // Save game over state
         }
     }
 
@@ -604,6 +616,7 @@ export class GameScene extends Phaser.Scene {
         this.activeShapes = [];
         this.spawnAllShapes();
         SoundManager.getInstance().play('shuffle');
+        this.saveGameState(); // Auto-save after shuffle
     }
 
     private setDeleteMode(enabled: boolean) {
@@ -724,6 +737,7 @@ export class GameScene extends Phaser.Scene {
 
         this.setDeleteMode(false);
         this.updateShapeVisuals();
+        this.saveGameState(); // Auto-save after hammer
     }
 
     private updateScoreUI() {
@@ -731,6 +745,14 @@ export class GameScene extends Phaser.Scene {
     }
 
     private loadHighScore() {
+        // Check cached data first (event may have already fired in BootScene)
+        const ym = YandexManager.getInstance();
+        if (ym.cachedData && ym.cachedData.highScore > this.highScore) {
+            this.highScore = ym.cachedData.highScore;
+            this.updateHighScoreUI();
+        }
+
+        // Also listen for late arrivals
         EventBus.on(GameEvents.GAME_DATA_LOADED, (data: any) => {
             if (data && data.highScore > this.highScore) {
                 this.highScore = data.highScore;
@@ -750,6 +772,236 @@ export class GameScene extends Phaser.Scene {
 
     private updateHighScoreUI() {
         if (this.domHighValue) this.domHighValue.textContent = String(this.highScore);
+    }
+
+    // ==========================================
+    //  GAME STATE SAVE / LOAD (п. 1.9)
+    // ==========================================
+
+    private buildStateObject(): any {
+        // Serialize grid: 8x8 array of textureKey or null
+        const gridData: (string | null)[][] = [];
+        for (let y = 0; y < GAME_CONFIG.gridSize; y++) {
+            gridData[y] = [];
+            for (let x = 0; x < GAME_CONFIG.gridSize; x++) {
+                const sprite = this.grid[y][x];
+                gridData[y][x] = sprite ? sprite.texture.key : null;
+            }
+        }
+
+        // Serialize active shapes
+        const shapesData = this.activeShapes.map(container => {
+            const blocks = container.getData('shapeBlocks') as number[][];
+            const textureKey = container.getData('textureKey') as string;
+            const def = SHAPE_DEFS.find(d =>
+                d.blocks.length === blocks.length &&
+                d.blocks.every((b, i) => b[0] === blocks[i][0] && b[1] === blocks[i][1])
+            );
+            return { name: def ? def.name : 'single', textureKey };
+        });
+
+        return {
+            grid: gridData,
+            score: this.score,
+            highScore: this.highScore,
+            shapes: shapesData,
+            comboStreak: this.comboStreak,
+            isGameOver: this.isGameOver,
+            v: 2
+        };
+    }
+
+    private saveGameState() {
+        if (this.isGameOver && this.score === 0) return; // Don't save empty game-over
+
+        try {
+            const gameState = this.buildStateObject();
+
+            // 1. Always save to localStorage (instant, sync)
+            localStorage.setItem('crystal_puzzle_state', JSON.stringify(gameState));
+
+            // 2. Also save to Yandex Player Data (async, persistent)
+            const ym = YandexManager.getInstance();
+            ym.saveFullState(gameState, this.highScore);
+
+        } catch (_e) {
+            console.warn('[Save] Failed to save game state');
+        }
+    }
+
+    private initAutoSave() {
+        // Save when user leaves/minimizes/refreshes page
+        const autoSave = () => {
+            if (!this.isGameOver || this.score > 0) {
+                this.saveGameState();
+            }
+        };
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') autoSave();
+        });
+        window.addEventListener('beforeunload', autoSave);
+        window.addEventListener('pagehide', autoSave);
+    }
+
+    private restoreFromData(state: any): boolean {
+        if (!state || state.v !== 2 || !state.grid) return false;
+        if (state.grid.length !== GAME_CONFIG.gridSize) return false;
+
+        // Restore score
+        this.score = state.score || 0;
+        this.highScore = Math.max(state.highScore || 0, this.highScore);
+        this.comboStreak = state.comboStreak || 0;
+        this.isGameOver = state.isGameOver || false;
+        this.updateScoreUI();
+        this.updateHighScoreUI();
+
+        // Restore grid
+        let hasGridContent = false;
+        for (let y = 0; y < GAME_CONFIG.gridSize; y++) {
+            for (let x = 0; x < GAME_CONFIG.gridSize; x++) {
+                const textureKey = state.grid[y]?.[x];
+                if (textureKey && this.textures.exists(textureKey)) {
+                    const px = this.startX + x * CELL_SIZE + CELL_SIZE / 2;
+                    const py = this.startY + y * CELL_SIZE + CELL_SIZE / 2;
+
+                    let sprite = this.blockPool?.get(px, py, textureKey) as Phaser.GameObjects.Sprite;
+                    if (!sprite) {
+                        sprite = this.add.sprite(px, py, textureKey);
+                        this.blockPool?.add(sprite);
+                    }
+                    sprite.setTexture(textureKey);
+                    sprite.clearTint();
+                    sprite.setAlpha(1);
+                    sprite.setActive(true).setVisible(true);
+                    sprite.setDepth(GAME_CONFIG.depth.placed);
+                    sprite.setInteractive();
+                    sprite.removeAllListeners('pointerdown');
+                    sprite.setData('gridX', x);
+                    sprite.setData('gridY', y);
+                    this.grid[y][x] = sprite;
+                    hasGridContent = true;
+                }
+            }
+        }
+
+        // Restore dock shapes
+        if (state.shapes && state.shapes.length > 0) {
+            const defs = state.shapes.map((s: { name: string; textureKey: string }) => {
+                const def = SHAPE_DEFS.find(d => d.name === s.name);
+                return { def: def || SHAPE_DEFS[0], textureKey: s.textureKey };
+            });
+
+            const totalWidth = defs.reduce((sum: number, d: any) =>
+                sum + (d.def.width || 0) * GAME_CONFIG.dockScale, 0) + GAME_CONFIG.slotGap * (defs.length - 1);
+            let cursorX = GAME_CONFIG.dockPaddingX + Math.max(0, this.availableDockWidth - totalWidth) / 2;
+
+            defs.forEach((item: any) => {
+                const scaledWidth = (item.def.width || 0) * GAME_CONFIG.dockScale;
+                cursorX += scaledWidth / 2;
+                this.createShapeFromSave(item.def, cursorX, this.shapeRowY, item.textureKey);
+                cursorX += scaledWidth / 2 + GAME_CONFIG.slotGap;
+            });
+        } else if (!hasGridContent) {
+            return false;
+        }
+
+        this.updateShapeVisuals();
+
+        if (this.isGameOver && this.domModal) {
+            this.domModal.classList.add('is-visible');
+        }
+
+        console.log('[Save] Game state restored');
+        return true;
+    }
+
+    private loadGameState(): boolean {
+        // 1. Try localStorage first (sync, fast)
+        try {
+            const raw = localStorage.getItem('crystal_puzzle_state');
+            if (raw) {
+                const state = JSON.parse(raw);
+                if (this.restoreFromData(state)) {
+                    console.log('[Save] Restored from localStorage');
+                    return true;
+                }
+            }
+        } catch (_e) { }
+
+        // 2. Try Yandex cached data (loaded during BootScene)
+        const ym = YandexManager.getInstance();
+        if (ym.cachedData && ym.cachedData.gameState) {
+            if (this.restoreFromData(ym.cachedData.gameState)) {
+                console.log('[Save] Restored from Yandex player data');
+                return true;
+            }
+        }
+
+        // 3. If both fail, check if we at least have a highScore
+        if (ym.cachedData && ym.cachedData.highScore > 0) {
+            this.highScore = ym.cachedData.highScore;
+            this.updateHighScoreUI();
+        }
+
+        return false;
+    }
+
+    private setupYandexStateRestore() {
+        // Fallback: if Yandex data arrives AFTER create (e.g. slow network)
+        EventBus.on(GameEvents.GAME_DATA_LOADED, (data: any) => {
+            if (!data || !data.gameState || data.gameState.v !== 2) return;
+
+            // Only restore if game is still in fresh state
+            const gridEmpty = this.grid.every(row => row.every(cell => cell === null));
+            if (gridEmpty && this.score === 0 && !this.isGameOver) {
+                console.log('[Save] Late restore from Yandex data...');
+                this.activeShapes.forEach(s => {
+                    s.list.forEach(c => {
+                        if (c instanceof Phaser.GameObjects.Sprite) this.blockPool?.killAndHide(c);
+                    });
+                    s.destroy();
+                });
+                this.activeShapes = [];
+                this.restoreFromData(data.gameState);
+            }
+
+            // Always update highScore
+            if (data.highScore > this.highScore) {
+                this.highScore = data.highScore;
+                this.updateHighScoreUI();
+            }
+        });
+    }
+
+    private createShapeFromSave(def: any, x: number, y: number, textureKey: string) {
+        const offsetX = -(def.width || 0) / 2 + CELL_SIZE / 2;
+        const offsetY = -(def.height || 0) / 2 + CELL_SIZE / 2;
+
+        const container = this.add.container(x, y);
+        container.setData({ homeX: x, homeY: y, shapeBlocks: def.blocks, textureKey: textureKey });
+        container.setDepth(GAME_CONFIG.depth.dock).setScale(GAME_CONFIG.dockScale);
+
+        def.blocks.forEach(([bx, by]: number[]) => {
+            const bxPos = (bx - (def.minX || 0)) * CELL_SIZE + offsetX;
+            const byPos = (by - (def.minY || 0)) * CELL_SIZE + offsetY;
+
+            let block = this.blockPool?.get(bxPos, byPos, textureKey) as Phaser.GameObjects.Sprite;
+            if (!block) {
+                block = this.add.sprite(bxPos, byPos, textureKey);
+                this.blockPool?.add(block);
+            }
+            block.setTexture(textureKey);
+            block.clearTint();
+            block.setActive(true).setVisible(true);
+            block.setData('parentContainer', container);
+            block.setData('gridX', undefined);
+            block.setData('gridY', undefined);
+            block.setInteractive({ useHandCursor: !this.deleteMode });
+            container.add(block);
+        });
+
+        this.activeShapes.push(container);
     }
 
     private restartGame() {
@@ -780,6 +1032,7 @@ export class GameScene extends Phaser.Scene {
 
         // 2. Spawn new shapes
         this.spawnAllShapes();
+        this.saveGameState(); // Save fresh game state
 
         // 3. Show interstitial ad (game already works in background)
         YandexManager.getInstance().showInterstitialAd().catch(() => { });
@@ -884,6 +1137,7 @@ export class GameScene extends Phaser.Scene {
 
         // Clear saved data
         YandexManager.getInstance().clearGameData();
+        try { localStorage.removeItem('crystal_puzzle_state'); } catch (_e) { }
 
         // Visual feedback
         GameJuice.showFloatingText(

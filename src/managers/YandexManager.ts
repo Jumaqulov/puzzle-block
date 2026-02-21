@@ -13,6 +13,7 @@ export class YandexManager {
     public isAuthorized: boolean = false;
 
     private leaderboardName: string = 'crystalpuzzlehighscore';
+    public cachedData: any = null; // Cached loaded data for GameScene access
 
     public callbacks: {
         onAdOpen: (() => void) | null;
@@ -301,6 +302,7 @@ export class YandexManager {
                     rawData.highScore = result.score;
                 }
             }
+            this.cachedData = rawData; // Cache for GameScene access
             EventBus.emit(GameEvents.GAME_DATA_LOADED, rawData);
         }
 
@@ -317,6 +319,25 @@ export class YandexManager {
         return await this.saveGameData(payload);
     }
 
+    /**
+     * Save full game state (grid + shapes + score) alongside highScore.
+     * Uses Yandex Player Data API for authorized users, localStorage as fallback.
+     */
+    public async saveFullState(gameState: any, highScore: number): Promise<void> {
+        // Build combined payload
+        const scorePayload = ScoreIntegrity.isScorePlausible(highScore)
+            ? ScoreIntegrity.createPayload(highScore)
+            : { highScore: 0 };
+
+        const combined = {
+            ...scorePayload,
+            gameState: gameState
+        };
+
+        // Save via Yandex player data (or localStorage fallback)
+        await this.saveGameData(combined);
+    }
+
     public async submitScore(score: number): Promise<boolean> {
         if (!this.ysdk) return false;
 
@@ -330,14 +351,14 @@ export class YandexManager {
     }
 
     public async onGameOver(score: number, highScore: number): Promise<void> {
-        const newHighScore = Math.max(score, highScore);
-        await this.saveHighScore(newHighScore);
+        // Submit to leaderboard
         await this.submitScore(score);
     }
 
     public async clearGameData(): Promise<void> {
         try {
             localStorage.removeItem('crystal_puzzle_data');
+            localStorage.removeItem('crystal_puzzle_state');
         } catch (_e) { }
 
         if (this.player && this.isAuthorized) {
