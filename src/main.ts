@@ -4,6 +4,7 @@ import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { YandexManager } from './managers/YandexManager';
 import { Starfield } from './visuals/Starfield';
+import { LocalizationManager } from './managers/LocalizationManager';
 
 // Import CSS
 import '@phosphor-icons/web/regular'; // Loads regular weight icons
@@ -81,6 +82,8 @@ async function initializeApp() {
     // Yandex SDK First
     const yandex = YandexManager.getInstance();
     await yandex.init();
+
+    LocalizationManager.getInstance().init();
 
     // Start Phaser
     window.game = new Phaser.Game(config);

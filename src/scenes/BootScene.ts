@@ -1,5 +1,4 @@
 import { CELL_SIZE, BLOCK_TEXTURES, GAME_CONFIG } from '../consts';
-import { LocalizationManager } from '../managers/LocalizationManager';
 import { SoundManager } from '../managers/SoundManager';
 import { YandexManager } from '../managers/YandexManager';
 import { EventBus, GameEvents } from '../utils/EventBus';
@@ -23,7 +22,6 @@ export class BootScene extends Phaser.Scene {
         this.createCellBgTexture();
 
         // Initialize Managers
-        LocalizationManager.getInstance().init();
         SoundManager.getInstance().init();
 
         const startGame = () => {
