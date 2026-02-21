@@ -4,7 +4,7 @@ export class LocalizationManager {
     private static instance: LocalizationManager;
 
     public supportedLanguages: Language[] = ['en', 'ru', 'uz'];
-    public currentLang: Language = 'uz';
+    public currentLang: Language = 'en';
 
     private translations: Record<Language, Record<string, string>> = {
         en: {
@@ -122,25 +122,49 @@ export class LocalizationManager {
     }
 
     private detectLanguage(): Language {
-        // 1. Check Yandex Games SDK
+        // 1. ALWAYS use Yandex Games SDK first (п. 2.14 requirement)
         if (typeof window !== 'undefined' && window.ysdk) {
             try {
-                const yandexLang = window.ysdk.environment.i18n.lang as Language;
-                if (yandexLang && this.supportedLanguages.includes(yandexLang)) {
-                    return yandexLang;
+                const yandexLang = window.ysdk.environment.i18n.lang;
+                console.log(`[i18n] Yandex SDK language: ${yandexLang}`);
+
+                if (yandexLang) {
+                    const lang = yandexLang.toLowerCase();
+
+                    // Direct match
+                    if (this.supportedLanguages.includes(lang as Language)) {
+                        return lang as Language;
+                    }
+
+                    // Map unsupported languages to closest supported
+                    const sdkLangMap: Record<string, Language> = {
+                        // CIS / Slavic → Russian
+                        'uk': 'ru', 'be': 'ru', 'kk': 'ru', 'ky': 'ru',
+                        'tg': 'ru', 'mn': 'ru', 'hy': 'ru', 'ka': 'ru',
+                        // Turkic → Uzbek (closest)
+                        'az': 'uz', 'tk': 'uz', 'tr': 'uz',
+                        // Everything else → English
+                    };
+
+                    if (sdkLangMap[lang]) {
+                        return sdkLangMap[lang];
+                    }
+
+                    // Any other language → English (international default)
+                    return 'en';
                 }
             } catch (e) {
-                console.log('[i18n] Yandex SDK not available');
+                console.warn('[i18n] Yandex SDK language detection failed:', e);
             }
         }
 
-        // 2. Check localStorage
+        // 2. Check localStorage (only when SDK not available — local dev)
         const savedLang = localStorage.getItem('crystal_puzzle_lang') as Language;
         if (savedLang && this.supportedLanguages.includes(savedLang)) {
             return savedLang;
         }
 
-        // 3. Browser
+        // 3. Browser fallback (local dev only)
         const browserLang = navigator.language || (navigator as any).userLanguage || 'en';
         const langCode = browserLang.split('-')[0].toLowerCase();
 
@@ -154,17 +178,18 @@ export class LocalizationManager {
         };
 
         const mappedLang = langMap[langCode];
-        if (mappedLang && this.supportedLanguages.includes(mappedLang)) {
+        if (mappedLang) {
             return mappedLang;
         }
 
-        return 'uz';
+        // Default: English (Yandex platform international standard)
+        return 'en';
     }
 
     public setLanguage(lang: string): void {
         if (!this.supportedLanguages.includes(lang as Language)) {
-            console.warn(`[i18n] Unsupported language: ${lang}, falling back to uz`);
-            lang = 'uz';
+            console.warn(`[i18n] Unsupported language: ${lang}, falling back to en`);
+            lang = 'en';
         }
 
         this.currentLang = lang as Language;
