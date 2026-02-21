@@ -938,10 +938,6 @@ export class GameScene extends Phaser.Scene {
                         window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank');
                         break;
 
-                    case 'email':
-                        window.open(`mailto:?subject=${encodedTitle}&body=${encodedText}%0A${encodedUrl}`, '_self');
-                        break;
-
                     case 'x':
                         window.open(`https://x.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, '_blank');
                         break;

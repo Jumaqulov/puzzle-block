@@ -2503,15 +2503,6 @@ body.delete-mode #game-container canvas {
     background: linear-gradient(135deg, #2fde73, #22b65c);
 }
 
-.share-btn--email {
-    background: linear-gradient(135deg, #ea4335, #c5221f);
-    color: white;
-}
-
-.share-btn--email:hover {
-    background: linear-gradient(135deg, #f55549, #d93025);
-}
-
 .share-btn--facebook {
     background: linear-gradient(135deg, #1877f2, #145dbf);
     color: white;
