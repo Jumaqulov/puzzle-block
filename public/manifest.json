@@ -2,7 +2,7 @@
   "name": "Crystal Puzzle",
   "short_name": "Crystal",
   "version": "1.3.1",
-  "description": "Kristallar bilan ajoyib mantiqiy o'yin. / A fascinating puzzle game with crystals.",
+  "description": "A fascinating block puzzle game with crystals. Clear lines, use power-ups, and set high scores!",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0F051D",
@@ -22,13 +22,20 @@
     "casual"
   ],
   "i18n": {
-    "uz": {
-      "name": "Kristal Pazl",
-      "description": "Kristallar bilan ajoyib mantiqiy o'yin."
+    "en": {
+      "name": "Crystal Puzzle",
+      "short_name": "Crystal",
+      "description": "A fascinating block puzzle game with crystals."
     },
     "ru": {
-      "name": "Кристалл Пазл",
-      "description": "Увлекательная игра-головоломка с кристаллами."
+      "name": "Кристальный Пазл",
+      "short_name": "Кристалл",
+      "description": "Увлекательная игра-головоломка с кристаллами. Собирайте линии и бейте рекорды!"
+    },
+    "uz": {
+      "name": "Kristal Pazl",
+      "short_name": "Kristal",
+      "description": "Kristallar bilan ajoyib mantiqiy o'yin. Qatorlarni tozalang va rekord o'rnating!"
     }
   },
   "prefer_related_applications": false
