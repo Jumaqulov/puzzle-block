@@ -607,9 +607,55 @@ export class GameScene extends Phaser.Scene {
             s.destroy();
         });
         this.activeShapes = [];
-        this.spawnAllShapes();
+        this.spawnSmartShapes();
         SoundManager.getInstance().play('shuffle');
         this.saveGameState(); // Auto-save after shuffle
+    }
+
+    /**
+     * Smart shape spawning — guarantees at least 1 shape can be placed.
+     * Used by Shuffle (paid with ad) to prevent wasted reward.
+     */
+    private spawnSmartShapes() {
+        // Find which shapes can fit on current board
+        const fittable = SHAPE_DEFS.filter(def => this.canPlaceBlocksAnywhere(def.blocks));
+
+        if (fittable.length === 0) {
+            // Board is completely full — no shape can fit, just spawn random
+            this.spawnAllShapes();
+            return;
+        }
+
+        // At least 1 of 3 shapes MUST be fittable
+        const defs: any[] = [];
+
+        // Slot 1: guaranteed fittable
+        defs.push(Phaser.Utils.Array.GetRandom(fittable));
+
+        // Slot 2: try fittable, fallback to random
+        if (fittable.length > 1 && Math.random() < 0.7) {
+            defs.push(Phaser.Utils.Array.GetRandom(fittable));
+        } else {
+            defs.push(Phaser.Utils.Array.GetRandom(SHAPE_DEFS));
+        }
+
+        // Slot 3: random (keeps game interesting)
+        defs.push(Phaser.Utils.Array.GetRandom(SHAPE_DEFS));
+
+        // Shuffle order so guaranteed shape isn't always first
+        Phaser.Utils.Array.Shuffle(defs);
+
+        const totalWidth = defs.reduce((sum, d) => sum + (d.width || 0) * GAME_CONFIG.dockScale, 0) + GAME_CONFIG.slotGap * 2;
+        let cursorX = GAME_CONFIG.dockPaddingX + Math.max(0, this.availableDockWidth - totalWidth) / 2;
+
+        defs.forEach((def) => {
+            const scaledWidth = (def.width || 0) * GAME_CONFIG.dockScale;
+            cursorX += scaledWidth / 2;
+            this.createShape(def, cursorX, this.shapeRowY);
+            cursorX += scaledWidth / 2 + GAME_CONFIG.slotGap;
+        });
+
+        this.updateShapeVisuals();
     }
 
     private setDeleteMode(enabled: boolean) {
