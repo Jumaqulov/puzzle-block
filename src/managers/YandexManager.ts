@@ -352,7 +352,7 @@ export class YandexManager {
         }
     }
 
-    public async onGameOver(score: number, highScore: number): Promise<void> {
+    public async onGameOver(score: number, _highScore: number): Promise<void> {
         // Submit to leaderboard
         await this.submitScore(score);
     }
