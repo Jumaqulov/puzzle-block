@@ -526,10 +526,37 @@ export class GameScene extends Phaser.Scene {
         if (!canFit) {
             this.isGameOver = true;
             this.setDeleteMode(false);
-            SoundManager.getInstance().play('gameover');
-            YandexManager.getInstance().onGameOver(this.score, this.highScore);
-            if (this.domModal) this.domModal.classList.add('is-visible');
-            this.saveGameState(); // Save game over state
+
+            // 1. Hide active shapes in dock immediately
+            this.activeShapes.forEach(s => {
+                if (s) s.setVisible(false);
+            });
+
+            // 2. Play bottom-up fade animation
+            const delayPerRow = 100;
+            const rows = GAME_CONFIG.gridSize;
+
+            for (let y = rows - 1; y >= 0; y--) {
+                const rowIndexFromBottom = (rows - 1) - y;
+
+                this.time.delayedCall(rowIndexFromBottom * delayPerRow, () => {
+                    for (let x = 0; x < rows; x++) {
+                        const block = this.grid[y][x];
+                        if (block) {
+                            block.setTint(0x555555);
+                        }
+                    }
+                });
+            }
+
+            // 3. Show game over screen after animation finishes
+            const totalAnimationDuration = rows * delayPerRow + 300;
+            this.time.delayedCall(totalAnimationDuration, () => {
+                SoundManager.getInstance().play('gameover');
+                YandexManager.getInstance().onGameOver(this.score, this.highScore);
+                if (this.domModal) this.domModal.classList.add('is-visible');
+                this.saveGameState(); // Save game over state
+            });
         }
     }
 
