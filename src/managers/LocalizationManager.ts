@@ -37,7 +37,9 @@ export class LocalizationManager {
             reset_cancel: 'Cancel',
             reset_confirm: 'Reset',
             reset_success: 'Progress has been reset',
-            no_blocks: 'No blocks!'
+            no_blocks: 'No blocks!',
+            continue_button: 'Continue',
+            continue_success: 'SECOND CHANCE!'
         },
         ru: {
             game_title: 'Кристальный Пазл',
@@ -69,7 +71,9 @@ export class LocalizationManager {
             reset_cancel: 'Отмена',
             reset_confirm: 'Сбросить',
             reset_success: 'Прогресс сброшен',
-            no_blocks: 'Нет блоков!'
+            no_blocks: 'Нет блоков!',
+            continue_button: 'Продолжить',
+            continue_success: 'ВТОРОЙ ШАНС!'
         },
         uz: {
             game_title: 'Crystal Puzzle',
@@ -101,7 +105,9 @@ export class LocalizationManager {
             reset_cancel: 'Bekor qilish',
             reset_confirm: 'Tozalash',
             reset_success: 'Progress tozalandi',
-            no_blocks: "Bloklar yo'q!"
+            no_blocks: "Bloklar yo'q!",
+            continue_button: 'Davom ettirish',
+            continue_success: 'IKKINCHI IMKONIYAT!'
         }
     };
 

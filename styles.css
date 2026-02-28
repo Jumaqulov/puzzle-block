@@ -550,6 +550,48 @@ html[lang="ru"] .btn {
     box-shadow: 0 0 20px rgba(188, 19, 254, 0.4);
 }
 
+.btn--continue {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(45deg, #00C853, #00E676);
+    box-shadow: 0 0 16px rgba(0, 200, 83, 0.4);
+    width: 100%;
+    justify-content: center;
+    position: relative;
+    font-size: 17px;
+    padding: 12px 18px;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.btn--continue:hover {
+    box-shadow: 0 0 22px rgba(0, 200, 83, 0.65), 0 0 28px rgba(0, 230, 118, 0.5);
+}
+
+.btn--continue .ad-badge {
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.25);
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.btn--continue.is-hidden {
+    display: none;
+}
+
+.modal-score {
+    font-size: 42px;
+    font-weight: 700;
+    font-family: "Orbitron", "Exo 2", sans-serif;
+    margin-bottom: 18px;
+    background: linear-gradient(135deg, #00D4FF, #BC13FE);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
 .btn:hover {
     transform: scale(1.05);
     box-shadow: 0 0 22px rgba(0, 212, 255, 0.65), 0 0 28px rgba(188, 19, 254, 0.7);

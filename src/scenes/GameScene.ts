@@ -11,6 +11,7 @@ export class GameScene extends Phaser.Scene {
     private score: number = 0;
     private highScore: number = 0;
     private isGameOver: boolean = false;
+    private continueUsed: boolean = false;
     private deleteMode: boolean = false;
     private comboStreak: number = 0;
     private ghostSprites: Phaser.GameObjects.Sprite[] = [];
@@ -141,6 +142,13 @@ export class GameScene extends Phaser.Scene {
             const newBtn = restartBtn.cloneNode(true);
             if (restartBtn.parentNode) restartBtn.parentNode.replaceChild(newBtn, restartBtn);
             newBtn.addEventListener('click', () => this.restartGame());
+        }
+
+        const continueBtn = document.getElementById('continue-btn');
+        if (continueBtn) {
+            const newBtn = continueBtn.cloneNode(true);
+            if (continueBtn.parentNode) continueBtn.parentNode.replaceChild(newBtn, continueBtn);
+            newBtn.addEventListener('click', () => this.continueGame());
         }
 
         this.initSettings();
@@ -554,8 +562,19 @@ export class GameScene extends Phaser.Scene {
             this.time.delayedCall(totalAnimationDuration, () => {
                 SoundManager.getInstance().play('gameover');
                 YandexManager.getInstance().onGameOver(this.score, this.highScore);
+
+                // Show score in modal
+                const scoreEl = document.getElementById('gameover-score');
+                if (scoreEl) scoreEl.textContent = String(this.score);
+
+                // Show/hide continue button (1 use per game)
+                const continueBtn = document.getElementById('continue-btn');
+                if (continueBtn) {
+                    continueBtn.classList.toggle('is-hidden', this.continueUsed);
+                }
+
                 if (this.domModal) this.domModal.classList.add('is-visible');
-                this.saveGameState(); // Save game over state
+                this.saveGameState();
             });
         }
     }
@@ -873,6 +892,7 @@ export class GameScene extends Phaser.Scene {
             shapes: shapesData,
             comboStreak: this.comboStreak,
             isGameOver: this.isGameOver,
+            continueUsed: this.continueUsed,
             v: 2
         };
     }
@@ -919,6 +939,7 @@ export class GameScene extends Phaser.Scene {
         this.highScore = Math.max(state.highScore || 0, this.highScore);
         this.comboStreak = state.comboStreak || 0;
         this.isGameOver = state.isGameOver || false;
+        this.continueUsed = state.continueUsed || false;
         this.updateScoreUI();
         this.updateHighScoreUI();
 
@@ -975,6 +996,12 @@ export class GameScene extends Phaser.Scene {
         this.updateShapeVisuals();
 
         if (this.isGameOver && this.domModal) {
+            const scoreEl = document.getElementById('gameover-score');
+            if (scoreEl) scoreEl.textContent = String(this.score);
+            const continueBtn = document.getElementById('continue-btn');
+            if (continueBtn) {
+                continueBtn.classList.toggle('is-hidden', this.continueUsed);
+            }
             this.domModal.classList.add('is-visible');
         }
 
@@ -1089,6 +1116,7 @@ export class GameScene extends Phaser.Scene {
         this.activeShapes = [];
         this.score = 0;
         this.isGameOver = false;
+        this.continueUsed = false;
         this.comboStreak = 0;
         this.draggedContainer = null;
         this.setDeleteMode(false);
@@ -1102,6 +1130,80 @@ export class GameScene extends Phaser.Scene {
 
         // 3. Show interstitial ad (game already works in background)
         YandexManager.getInstance().showInterstitialAd().catch(() => { });
+    }
+
+    /**
+     * Continue game after watching a rewarded ad.
+     * Clears bottom 3 rows + spawns smart shapes that fit.
+     * Can only be used once per game session.
+     */
+    private async continueGame() {
+        // Disable button immediately to prevent double-click
+        const continueBtn = document.getElementById('continue-btn');
+        if (continueBtn) (continueBtn as HTMLButtonElement).disabled = true;
+
+        // Show rewarded ad — user must watch fully
+        const adWatched = await YandexManager.getInstance().showRewardAd('continue');
+
+        if (!adWatched) {
+            // Ad failed or user skipped — re-enable button
+            if (continueBtn) (continueBtn as HTMLButtonElement).disabled = false;
+            return;
+        }
+
+        // Mark as used (1 per game)
+        this.continueUsed = true;
+
+        // Hide game over modal
+        if (this.domModal) this.domModal.classList.remove('is-visible');
+
+        // Clear bottom 3 rows with visual effect
+        const rowsToClear = 3;
+        const startRow = GAME_CONFIG.gridSize - rowsToClear;
+
+        for (let y = startRow; y < GAME_CONFIG.gridSize; y++) {
+            for (let x = 0; x < GAME_CONFIG.gridSize; x++) {
+                if (this.grid[y][x]) {
+                    const sprite = this.grid[y][x]!;
+                    GameJuice.onBlockClear(sprite, x, y, this.startX, this.startY);
+                    this.blockPool?.killAndHide(sprite);
+                    this.grid[y][x] = null;
+                }
+            }
+        }
+
+        // Also clear tint from remaining blocks (game over animation tinted them)
+        for (let y = 0; y < GAME_CONFIG.gridSize; y++) {
+            for (let x = 0; x < GAME_CONFIG.gridSize; x++) {
+                if (this.grid[y][x]) {
+                    this.grid[y][x]!.clearTint();
+                }
+            }
+        }
+
+        // Resume game state
+        this.isGameOver = false;
+
+        // Remove old shapes and give new smart ones
+        this.activeShapes.forEach(s => {
+            s.list.forEach(c => { if (c instanceof Phaser.GameObjects.Sprite) this.blockPool?.killAndHide(c); });
+            s.destroy();
+        });
+        this.activeShapes = [];
+        this.spawnSmartShapes();
+
+        SoundManager.getInstance().play('clear');
+
+        // Show feedback text
+        const i18n = LocalizationManager.getInstance();
+        GameJuice.showFloatingText(
+            i18n.t('continue_success'),
+            this.startX + (GAME_CONFIG.gridSize * CELL_SIZE) / 2,
+            this.startY + (GAME_CONFIG.gridSize * CELL_SIZE) / 2,
+            'excellent'
+        );
+
+        this.saveGameState();
     }
 
     private initSettings() {
