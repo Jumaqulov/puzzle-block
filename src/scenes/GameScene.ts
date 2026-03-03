@@ -257,6 +257,13 @@ export class GameScene extends Phaser.Scene {
 
             if (!this.draggedContainer) return;
 
+            // Safety: skip if container was destroyed (e.g. after touch cancel + respawn)
+            if (!this.draggedContainer.active) {
+                this.draggedContainer = null;
+                this.clearGhost();
+                return;
+            }
+
             // 🐛 Bug 2 Fix: Refined offset positioning so shape is always visible above finger
             const dragYOffset = -20;
             this.draggedContainer.setPosition(pointer.x, pointer.y + dragYOffset);
@@ -323,18 +330,46 @@ export class GameScene extends Phaser.Scene {
             const index = this.activeShapes.indexOf(container);
             if (index !== -1) this.activeShapes.splice(index, 1);
 
-            // Release blocks back to pool efficiently
-            const blocksToRelease = container.list.filter(c => c instanceof Phaser.GameObjects.Sprite) as Phaser.GameObjects.Sprite[];
-            blocksToRelease.forEach(block => {
-                this.blockPool?.killAndHide(block);
-                this.add.existing(block); // Re-add to scene display list from container
+            // Release blocks back to pool, destroy hit zone rectangles
+            const children = [...container.list];
+            children.forEach(child => {
+                if (child instanceof Phaser.GameObjects.Sprite) {
+                    this.blockPool?.killAndHide(child);
+                    this.add.existing(child); // Re-add to scene display list for pool reuse
+                } else {
+                    child.destroy(); // Destroy hit zone rectangles to prevent orphan leak
+                }
             });
-            container.removeAll(false); // Do NOT destroy the children, we want to reuse them
+            container.removeAll(false);
             container.destroy();
 
             if (this.activeShapes.length === 0) this.spawnAllShapes();
             this.checkGameOver();
             this.saveGameState(); // Auto-save after placement
+        });
+
+        // Mobile: handle touch cancel (notifications, gestures, incoming calls)
+        this.input.on('pointercancel', () => {
+            this.clearGhost();
+            if (this.draggedContainer && this.draggedContainer.active) {
+                this.tweens.add({
+                    targets: this.draggedContainer,
+                    x: this.draggedContainer.getData('homeX'),
+                    y: this.draggedContainer.getData('homeY'),
+                    scaleX: GAME_CONFIG.dockScale,
+                    scaleY: GAME_CONFIG.dockScale,
+                    alpha: 1,
+                    duration: 220,
+                    ease: 'Sine.easeInOut',
+                    onComplete: () => {
+                        if (this.draggedContainer) {
+                            this.draggedContainer.setDepth(GAME_CONFIG.depth.dock);
+                        }
+                        this.updateShapeVisuals();
+                    }
+                });
+            }
+            this.draggedContainer = null;
         });
     }
 
@@ -522,7 +557,24 @@ export class GameScene extends Phaser.Scene {
             container.add(block);
         });
 
+        this.addHitZone(container, def);
         this.activeShapes.push(container);
+    }
+
+    /**
+     * Adds an invisible expanded hit zone behind the shape blocks.
+     * This makes it much easier to grab shapes on mobile devices
+     * where finger taps are imprecise and small targets are hard to hit.
+     */
+    private addHitZone(container: Phaser.GameObjects.Container, def: any) {
+        const padding = 15;
+        const zoneWidth = (def.width || CELL_SIZE) + padding * 2;
+        const zoneHeight = (def.height || CELL_SIZE) + padding * 2;
+
+        const hitZone = this.add.rectangle(0, 0, zoneWidth, zoneHeight, 0x000000, 0);
+        hitZone.setInteractive({ useHandCursor: !this.deleteMode });
+        hitZone.setData('parentContainer', container);
+        container.addAt(hitZone, 0); // Add behind blocks
     }
 
     private checkGameOver() {
@@ -745,10 +797,10 @@ export class GameScene extends Phaser.Scene {
                 if (sprite.input) sprite.input.cursor = enabled ? 'pointer' : 'none';
             }
         });
-        // Clear hand cursor for dock
+        // Clear hand cursor for dock (sprites + hit zone rectangles)
         this.activeShapes.forEach(container => {
             container.list.forEach(child => {
-                if (child instanceof Phaser.GameObjects.Sprite && child.input) {
+                if ((child instanceof Phaser.GameObjects.Sprite || child instanceof Phaser.GameObjects.Rectangle) && child.input) {
                     child.input.cursor = enabled ? 'pointer' : 'none';
                 }
             });
@@ -1094,6 +1146,7 @@ export class GameScene extends Phaser.Scene {
             container.add(block);
         });
 
+        this.addHitZone(container, def);
         this.activeShapes.push(container);
     }
 
@@ -1370,6 +1423,7 @@ export class GameScene extends Phaser.Scene {
         this.input.off('gameobjectdown');
         this.input.off('pointermove');
         this.input.off('pointerup');
+        this.input.off('pointercancel');
 
         // Clear references
         this.blockPool?.clear(true, true);

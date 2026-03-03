@@ -31,3 +31,6 @@ package-lock.json
 # Optional: Environment files
 .env
 .env.*
+
+# Claude
+*.claude
