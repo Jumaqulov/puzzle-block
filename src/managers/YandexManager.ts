@@ -123,11 +123,13 @@ export class YandexManager {
         return new Promise<boolean>((resolve) => {
             this.isAdShowing = true;
             let rewarded = false;
-            let closed = false;
+            let resolved = false;
+            let adClosed = false;
 
+            let cleaned = false;
             const cleanup = () => {
-                if (closed) return;
-                closed = true;
+                if (cleaned) return;
+                cleaned = true;
                 this.isAdShowing = false;
                 SoundManager.getInstance().setMuted(false);
                 if (window.game && window.game.loop) window.game.loop.wake();
@@ -135,10 +137,17 @@ export class YandexManager {
                 if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
             };
 
+            const finalResolve = (result: boolean) => {
+                if (resolved) return;
+                resolved = true;
+                if (result) this.grantReward(rewardType);
+                resolve(result);
+            };
+
             safetyTimer = setTimeout(() => {
                 console.warn('[YaSDK] Ad safety timeout — forcing recovery');
                 cleanup();
-                resolve(false);
+                finalResolve(rewarded);
             }, 30000);
 
             this.ysdk!.adv.showRewardedVideo({
@@ -149,26 +158,29 @@ export class YandexManager {
                         if (this.callbacks.onAdOpen) this.callbacks.onAdOpen();
                     },
                     onClose: () => {
+                        adClosed = true;
                         cleanup();
+                        // If onRewarded already fired, resolve immediately
                         if (rewarded) {
-                            setTimeout(() => this.grantReward(rewardType), 100);
+                            finalResolve(true);
+                        } else {
+                            // Wait for onRewarded in case it fires after onClose (race condition)
+                            setTimeout(() => finalResolve(rewarded), 500);
                         }
-                        resolve(rewarded);
                     },
                     onRewarded: () => {
                         console.log(`[YaSDK] Reward granted for: ${rewardType}`);
                         rewarded = true;
-                        EventBus.emit(GameEvents.REWARD_SUCCESS, rewardType);
-                        if (this.callbacks.onRewardGranted) {
-                            this.callbacks.onRewardGranted(rewardType);
+                        // If ad already closed, resolve immediately (race condition: onRewarded after onClose)
+                        if (adClosed) {
+                            finalResolve(true);
                         }
                     },
                     onError: (e: any) => {
                         cleanup();
                         console.error('Ad Error', e);
-                        // Non-blocking notification instead of alert()
                         this.showToast(LocalizationManager.getInstance().t('ad_error'));
-                        resolve(false);
+                        finalResolve(false);
                     }
                 }
             });
@@ -178,6 +190,13 @@ export class YandexManager {
             console.error('Ad Exception', err);
             return false;
         });
+    }
+
+    public signalGameReady(): void {
+        try {
+            this.ysdk?.features?.LoadingAPI?.ready();
+            console.log('[YaSDK] Game Ready signal sent');
+        } catch (_e) { }
     }
 
     private grantReward(rewardType: string): void {

@@ -111,6 +111,9 @@ export class GameScene extends Phaser.Scene {
 
         // Tutorial
         this.checkTutorial();
+
+        // Signal Yandex platform that game is fully loaded and ready
+        YandexManager.getInstance().signalGameReady();
     }
 
     private calculateShapeBounds() {
