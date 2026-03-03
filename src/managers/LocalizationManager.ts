@@ -39,7 +39,8 @@ export class LocalizationManager {
             reset_success: 'Progress has been reset',
             no_blocks: 'No blocks!',
             continue_button: 'Continue',
-            continue_success: 'SECOND CHANCE!'
+            continue_success: 'SECOND CHANCE!',
+            ad_error: 'Ad failed to load'
         },
         ru: {
             game_title: 'Кристальный Пазл',
@@ -73,7 +74,8 @@ export class LocalizationManager {
             reset_success: 'Прогресс сброшен',
             no_blocks: 'Нет блоков!',
             continue_button: 'Продолжить',
-            continue_success: 'ВТОРОЙ ШАНС!'
+            continue_success: 'ВТОРОЙ ШАНС!',
+            ad_error: 'Реклама не загрузилась'
         },
         uz: {
             game_title: 'Crystal Puzzle',
@@ -107,7 +109,8 @@ export class LocalizationManager {
             reset_success: 'Progress tozalandi',
             no_blocks: "Bloklar yo'q!",
             continue_button: 'Davom ettirish',
-            continue_success: 'IKKINCHI IMKONIYAT!'
+            continue_success: 'IKKINCHI IMKONIYAT!',
+            ad_error: 'Reklama yuklanmadi'
         }
     };
 

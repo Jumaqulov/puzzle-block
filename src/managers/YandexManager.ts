@@ -1,4 +1,5 @@
 import { SoundManager } from './SoundManager';
+import { LocalizationManager } from './LocalizationManager';
 import { EventBus, GameEvents } from '../utils/EventBus';
 import { ScoreIntegrity } from '../utils/ScoreIntegrity';
 
@@ -166,7 +167,7 @@ export class YandexManager {
                         cleanup();
                         console.error('Ad Error', e);
                         // Non-blocking notification instead of alert()
-                        this.showToast("Reklama yuklanmadi");
+                        this.showToast(LocalizationManager.getInstance().t('ad_error'));
                         resolve(false);
                     }
                 }
